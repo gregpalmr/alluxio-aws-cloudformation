@@ -49,7 +49,7 @@ Clone this repo with the git CLI commands:
 
 Alluxio offers a free Community Edition as well as a trial licensed Enterprise Edition. Download one of them and upload it to an S3 bucket.
 
-Download the Alluxio Enterprise or Community Edition from the Alluxio website"
+Download the Alluxio Enterprise or Community Edition from the Alluxio website:
 
      https://www.alluxio.io/download/
 
