@@ -1,6 +1,6 @@
 # alluxio-aws-cloudformation
 
-AWS Cloudformation Template to Launch Alluxio and using S3 as the under filesystem (UFS).
+An AWS Cloudformation Template to launch an Alluxio cluster that uses S3 as the under filesystem (UFS).
 
 ## Background
 
@@ -12,7 +12,7 @@ This AWS Cloudformation template launches Alluxio on AWS Infrastructure and crea
 - Security Group rules for external access (can be restricted to your IP address)
 - Integration with your existing VPC and subnets
 
-This template launches 1 Alluxio master node, and a number of Alluxio worker nodes as specified. It configures and launches the Alluxio master and worker daemons and optionally sets up passwordless SSH between the master node and the workers.
+This template launches one Alluxio master node, and a number of Alluxio worker nodes as specified. It configures and launches the Alluxio master and worker daemons and optionally sets up passwordless SSH between the master node and the workers.
 
 ## Prerequisites
 
@@ -49,15 +49,15 @@ Clone this repo with the git CLI commands:
 
 Alluxio offers a free Community Edition as well as a trial licensed Enterprise Edition. Download one of them and upload it to an S3 bucket.
 
-     - Download the Alluxio Enterprise or Community Edition from the Alluxio website
+Download the Alluxio Enterprise or Community Edition from the Alluxio website
 
-          - See: https://www.alluxio.io/download/
+     - See: https://www.alluxio.io/download/
 
-     - Use your AWS S3 console or the AWS CLI to copy the Alluxio tar file to the bucket. For example:
+Use your AWS S3 console or the AWS CLI to copy the Alluxio tar file to the bucket. For example:
 
-          $ aws s3 cp alluxio-2.6.0-bin.tar.gz s3://alluxio-bucket/installers/
+     $ aws s3 cp alluxio-2.6.0-bin.tar.gz s3://alluxio-bucket/installers/
  
-### Step 3. Optionally, upload SSH keys to the S3 bucket
+### Step 3. Optionally upload SSH keys to the S3 bucket
 
 You can optionally create and upload SSH keys to be used for passwordless SSH access from the Alluxio master node to the worker nodes. Use these commands:
 
@@ -71,13 +71,13 @@ You can optionally create and upload SSH keys to be used for passwordless SSH ac
 
 AWS provides a "create-stack" command to launch a coordinated infrastructure creation process. Use the provided Cloudformation template to launch an Alluxio cluster. The template supports mulitiple cluster sizes including:
 
-- 1-worker - One Alluxio master node (m5.2xlarge) and one worker node (r5d.4xlarge)
-- 3-small-workers - One Alluxio master node (t2.medium) and three worker nodes (t2.medium)
-- 3-workers - One Alluxio master node (m5.2xlarge) and three worker nodes (r5d.4xlarge)
-- 5-workers - One Alluxio master node (m5.2xlarge) and five worker nodes (r5d.4xlarge)
-- 10-workers - One Alluxio master node (m5.2xlarge) and ten worker nodes (r5d.4xlarge)
-- 25-workers - One Alluxio master node (m5.2xlarge) and twenty-five worker nodes (r5d.4xlarge)
-- 50-workers - One Alluxio master node (m5.2xlarge) and one fifty worker nodes (r5d.4xlarge)
+     - 1-worker - One Alluxio master node (m5.2xlarge) and one worker node (r5d.4xlarge)
+     - 3-small-workers - One Alluxio master node (t2.medium) and three worker nodes (t2.medium)
+     - 3-workers - One Alluxio master node (m5.2xlarge) and three worker nodes (r5d.4xlarge)
+     - 5-workers - One Alluxio master node (m5.2xlarge) and five worker nodes (r5d.4xlarge)
+     - 10-workers - One Alluxio master node (m5.2xlarge) and ten worker nodes (r5d.4xlarge)
+     - 25-workers - One Alluxio master node (m5.2xlarge) and twenty-five worker nodes (r5d.4xlarge)
+     - 50-workers - One Alluxio master node (m5.2xlarge) and one fifty worker nodes (r5d.4xlarge)
 
 The cloudformation template requires some user supplied options, including:
 
