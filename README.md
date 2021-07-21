@@ -70,14 +70,13 @@ You can optionally create and upload SSH keys to be used for passwordless SSH ac
 ### Step 4. Run the AWS create stack command
 
 AWS provides a "create-stack" command to launch a coordinated infrastructure creation process. Use the provided Cloudformation template to launch an Alluxio cluster. The template supports mulitiple cluster sizes including:
-
-     - 1-worker - One Alluxio master node (m5.2xlarge) and one worker node (r5d.4xlarge)
-     - 3-small-workers - One Alluxio master node (t2.medium) and three worker nodes (t2.medium)
-     - 3-workers - One Alluxio master node (m5.2xlarge) and three worker nodes (r5d.4xlarge)
-     - 5-workers - One Alluxio master node (m5.2xlarge) and five worker nodes (r5d.4xlarge)
-     - 10-workers - One Alluxio master node (m5.2xlarge) and ten worker nodes (r5d.4xlarge)
-     - 25-workers - One Alluxio master node (m5.2xlarge) and twenty-five worker nodes (r5d.4xlarge)
-     - 50-workers - One Alluxio master node (m5.2xlarge) and one fifty worker nodes (r5d.4xlarge)
+- 1-worker - One Alluxio master node (m5.2xlarge) and one worker node (r5d.4xlarge)
+- 3-small-workers - One Alluxio master node (t2.medium) and three worker nodes (t2.medium)
+- 3-workers - One Alluxio master node (m5.2xlarge) and three worker nodes (r5d.4xlarge)
+- 5-workers - One Alluxio master node (m5.2xlarge) and five worker nodes (r5d.4xlarge)
+- 10-workers - One Alluxio master node (m5.2xlarge) and ten worker nodes (r5d.4xlarge)
+- 25-workers - One Alluxio master node (m5.2xlarge) and twenty-five worker nodes (r5d.4xlarge)
+- 50-workers - One Alluxio master node (m5.2xlarge) and one fifty worker nodes (r5d.4xlarge)
 
 The cloudformation template requires some user supplied options, including:
 
