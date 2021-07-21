@@ -163,6 +163,10 @@ The runTests will output the success or failure of the checks. If you have some 
 
      See: https://docs.alluxio.io/os/user/stable/en/operation/Troubleshooting.html
 
+You can view the files that were created by the Alluxio runTests command by clicking on the "Browse" tab link in the Alluxio Web console:
+
+![Alluxio Web Console](https://github.com/gregpalmr/alluxio-aws-cloudformation/blob/main/images/alluxio-console-browse-test-files.png?raw=true)
+
 ### Summary
 
 This github repo provides a cloudformation template to quickly launch an Alluxio cluster in an AWS environment. If you have any questions or comments, please direct them to gregpalmr@gmail.com
