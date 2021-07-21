@@ -1,0 +1,726 @@
+---
+### FILE: deploy_alluxio_cft.yaml
+### 
+### 
+###  USAGE: see http://github.com/gregpalmr/alluxio-aws-cloudformation
+### 
+### 
+###  Author: gregpalmr@gmail.com
+###
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Alluxio Enterprise Edition Deployment on AWS'
+Parameters:
+  keypairName:
+    Type: AWS::EC2::KeyPair::KeyName
+    AllowedPattern: ".+"
+    ConstraintDescription: Must select an existing EC2 KeyPair
+    Description: "AWS key pair to use to SSH to the VMs. SSH username for the VMs are centos (has sudo privilege). SSH into machines for changing configuration, reviewing logs, etc."
+  clusterSize:
+    Type: String
+    Description: "The type and number of machines are chosen based on the size selected."
+    AllowedValues:
+      - "Single-Node"
+      - "1-worker"
+      - "3-small-workers"
+      - "3-workers"
+      - "5-workers"
+      - "10-workers"
+      - "25-workers"
+      - "50-workers"
+    Default: "3-workers"
+  useVPC:
+    Type: AWS::EC2::VPC::Id
+    Description: "VPC to deploy the cluster into."
+  useSubnet:
+    Type: AWS::EC2::Subnet::Id
+    Description: "Subnet to deploy the cluster into. Must be in the selected VPC."
+  securityGroupInboundSourceCidr:
+    Type: String
+    Description: "The CIDR that represents that ip address range that can commicate with the Alluxio daemons via TCP ports."
+  alluxioDownloadURL:
+    Type: String
+    Description: "S3, HTTP or HTTPS URL to a Alluxio RPM. Leave empty to install the latest Alluxio CE release."
+    Default: "https://download.alluxio.com/community-server/alluxio-community-LATEST.noarch.rpm"
+  alluxioS3BucketName:
+    Type: String
+    Description: "An S3 bucket that Alluxio can use to store reflections and temporary files."
+    Default: ""
+  alluxioS3BucketAccessKeyId:
+    Type: String
+    Description: "An S3 bucket AWS_ACCESS_KEY_ID"
+    Default: ""
+  alluxioS3BucketSecretAccessKey:
+    Type: String
+    Description: "An S3 bucket AWS_SECRET_ACCESS_KEY"
+    Default: ""
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      -
+        Label:
+          default: Alluxio Cluster
+        Parameters:
+          - masterInstanceType
+          - masterCount
+          - workerInstanceType
+          - workerCount
+          - clusterSize
+          - useVPC
+          - useSubnet
+          - alluxioS3BucketName
+          - alluxioDownloadURL
+      -
+        Label:
+          default: AWS resource configuration
+        Parameters:
+          - keypairName
+    ParameterLabels:
+      keypairName:
+        default : "AWS keypair to use for SSHing into EC2 instances"
+      clusterSize:
+        default: "Cluster size"
+      useSubnet:
+        default: "Deploy to Subnet"
+      securityGroupInboundSourceCidr:
+        default: "SG Inbound Source CIDR"
+      useVPC:
+        default: "Deploy to VPC"
+      alluxioDownloadURL:
+        default: "Alluxio download URL"
+Mappings:
+  Custom:
+    Variables:
+      URL: https://download.alluxio.com/community-server/alluxio-community-LATEST.noarch.rpm
+  ClusterSizes:
+    Single-Node:
+      masterInstanceType: r5d.4xlarge
+      masterDiskSize: 300
+      masterMaxMemory: 122880
+      workerInstanceType: r5d.4xlarge
+      workerCount: 0
+      workerDiskSize: 100
+      workerMaxMemory: 122880
+    1-worker:
+      masterInstanceType: m5.2xlarge
+      masterDiskSize: 200
+      masterMaxMemory: 28672
+      workerInstanceType: r5d.4xlarge
+      workerCount: 1
+      workerDiskSize: 100
+      workerMaxMemory: 122880
+    3-small-workers:
+      masterInstanceType: t2.medium
+      masterDiskSize: 75
+      masterMaxMemory: 4098
+      workerInstanceType: t2.medium
+      workerCount: 3
+      workerDiskSize: 75
+      workerMaxMemory: 4098
+    3-workers:
+      masterInstanceType: m5.2xlarge
+      masterDiskSize: 200
+      masterMaxMemory: 28672
+      workerInstanceType: r5d.4xlarge
+      workerCount: 3
+      workerDiskSize: 100
+      workerMaxMemory: 122880
+    5-workers:
+      masterInstanceType: m5.2xlarge
+      masterDiskSize: 200
+      masterMaxMemory: 28672
+      workerInstanceType: r5d.4xlarge
+      workerCount: 5
+      workerDiskSize: 100
+      workerMaxMemory: 122880
+    10-workers:
+      masterInstanceType: m5.4xlarge
+      masterDiskSize: 200
+      masterMaxMemory: 61440
+      workerInstanceType: r5d.4xlarge
+      workerCount: 10
+      workerDiskSize: 100
+      workerMaxMemory: 122880
+    25-workers:
+      masterInstanceType: m5.4xlarge
+      masterDiskSize: 200
+      masterMaxMemory: 61440
+      workerInstanceType: r5d.4xlarge
+      workerCount: 25
+      workerDiskSize: 100
+      workerMaxMemory: 122880
+    50-workers:
+      masterInstanceType: m5.4xlarge
+      masterDiskSize: 200
+      masterMaxMemory: 61440
+      workerInstanceType: r5d.4xlarge
+      workerCount: 50
+      workerDiskSize: 100
+      workerMaxMemory: 122880
+  RegionMap:
+    # Centos 7 Images
+    us-east-1: # N Virginia
+      AMI: ami-02eac2c0129f6376b
+    us-east-2: # Ohio
+      AMI: ami-0f2b4fc905b0bd1f1
+    us-west-1: # California
+      AMI: ami-074e2d6769f445be5
+    us-west-2: # Oregon
+      AMI: ami-01ed306a12b7d1c96
+    ca-central-1: # Québec
+      AMI: ami-033e6106180a626d0
+    eu-central-1: # Frankfurt
+      AMI: ami-04cf43aca3e6f3de3
+    eu-west-1: # Ireland
+      AMI: ami-0ff760d16d9497662
+    eu-west-2: # London
+      AMI: ami-0eab3a90fc693af19
+    ap-southeast-1: # Singapore
+      AMI: ami-0b4dd9d65556cac22
+    ap-southeast-2: # Sydney
+      AMI: ami-08bd00d7713a39e7d
+    ap-south-1 : # Mumbai
+      AMI: ami-02e60be79e78fef21
+    ap-northeast-1: # Tokyo
+      AMI: ami-045f38c93733dd48d
+    ap-northeast-2: # Seoul
+      AMI: ami-06cf2a72dadf92410
+    sa-east-1: # São Paulo
+      AMI: ami-0b8d86d4bf91850af
+  SubnetConfig:
+    VPC:
+      CIDR: 10.0.0.0/16
+    Public:
+      CIDR: 10.0.0.0/24
+Conditions:
+  CreateVPC: !Equals [!Ref useSubnet, ""]
+Resources:
+  AlluxioIAMPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      ManagedPolicyName: !Join ["-", ["AlluxioIAMPolicy", !Ref "AWS::StackName"]]
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          -
+            Sid: AllowAlluxioToSignalResources
+            Effect: Allow
+            Action:
+              - cloudformation:SignalResource
+            Resource: "*"
+          -
+            Sid: AllowAlluxioToDescribeInstances
+            Effect: Allow
+            Action:
+              - ec2:DescribeInstances
+            Resource: "*"
+          -
+            Sid: AllowAlluxioToGetS3BucketLocations
+            Effect: Allow
+            Action:
+              - s3:GetEncryptionConfiguration
+              - s3:GetBucketLocation
+              - s3:ListAllMyBuckets
+              - s3:HeadBucket
+            Resource: "*"
+          -
+            Sid: AllowAlluxioToReadWriteToS3Buckets
+            Effect: Allow
+            Action:
+              - s3:ListBucket
+              - s3:GetObject
+              - s3:PutObject
+              - s3:DeleteObject
+            Resource: 
+              - !Join [ "", [ 'arn:aws:s3:::', !Ref alluxioS3BucketName       ] ]
+              - !Join [ "", [ 'arn:aws:s3:::', !Ref alluxioS3BucketName, '/*' ] ]
+
+  AlluxioIAMRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      RoleName: !Join ["-", ["AlluxioIAMRole", !Ref "AWS::StackName"]]
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ec2.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Path: /
+      ManagedPolicyArns:
+        - !Ref AlluxioIAMPolicy
+  AlluxioInstanceProfile:
+    Type: 'AWS::IAM::InstanceProfile'
+    Properties:
+      InstanceProfileName: !Join ["-", ["InstanceProfileName", !Ref "AWS::StackName"]]
+      Path: /
+      Roles: 
+        - !Ref AlluxioIAMRole
+  VPC:
+    Condition: CreateVPC
+    Type: AWS::EC2::VPC
+    Properties:
+      EnableDnsSupport: 'true'
+      EnableDnsHostnames: 'true'
+      CidrBlock: !FindInMap [SubnetConfig, VPC, CIDR]
+      Tags:
+      - Key: Name
+        Value: !Join ["-", [!Ref "AWS::StackName", "net"]]
+
+  PublicSubnet:
+    Condition: CreateVPC
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: !FindInMap [SubnetConfig, Public, CIDR]
+      Tags:
+      - Key: Name
+        Value: !Join ["-", [!Ref "AWS::StackName", "public"]]
+      - Key: Network
+        Value: Public
+
+  InternetGateway:
+    Condition: CreateVPC
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+      - Key: Name
+        Value: !Join ["-", [!Ref "AWS::StackName", "ig"]]
+
+  VPCGatewayAttachment:
+    Condition: CreateVPC
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref VPC
+      InternetGatewayId: !Ref InternetGateway
+
+  PublicRouteTable:
+    Condition: CreateVPC
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+      - Key: Name
+        Value: !Join ["-", [!Ref "AWS::StackName", "public"]]
+
+  PublicSubnetRouteTableAssociation:
+    Condition: CreateVPC
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnet
+      RouteTableId: !Ref PublicRouteTable
+
+  PublicRoute:
+    Condition: CreateVPC
+    Type: AWS::EC2::Route
+    DependsOn: VPCGatewayAttachment
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: !Ref securityGroupInboundSourceCidr
+      GatewayId: !Ref InternetGateway
+
+  AlluxioSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: "Alluxio Access"
+      VpcId: !If [CreateVPC, !Ref VPC, !Ref useVPC]
+      SecurityGroupIngress:
+      - IpProtocol: tcp
+        FromPort: '19999'
+        ToPort: '19999'
+        CidrIp: !Ref securityGroupInboundSourceCidr
+      - IpProtocol: tcp
+        FromPort: '22'
+        ToPort: '22'
+        CidrIp: !Ref securityGroupInboundSourceCidr
+      - IpProtocol: tcp
+        FromPort: '80'
+        ToPort: '80'
+        CidrIp: !Ref securityGroupInboundSourceCidr
+      - IpProtocol: tcp
+        FromPort: '443'
+        ToPort: '443'
+        CidrIp: !Ref securityGroupInboundSourceCidr
+  AvailabilityWaitHandle:
+    Type: AWS::CloudFormation::WaitConditionHandle
+  AvailabilityWaitCondition:
+    Type: AWS::CloudFormation::WaitCondition
+    DependsOn: AlluxioMaster
+    Properties:
+      Handle: !Ref "AvailabilityWaitHandle"
+      Timeout: "800"
+
+  AlluxioSecurityGroupSelfIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref AlluxioSecurityGroup
+      IpProtocol: -1
+      SourceSecurityGroupId: !Ref AlluxioSecurityGroup
+
+  AlluxioMaster:
+    Type: AWS::EC2::Instance
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Join ["-", [!Ref "AWS::StackName", "AlluxioMaster"]]
+      ImageId: !FindInMap [RegionMap, !Ref "AWS::Region", AMI]
+      KeyName: !Ref keypairName
+      InstanceType: !FindInMap [ClusterSizes, !Ref clusterSize, masterInstanceType]
+      IamInstanceProfile: !Ref AlluxioInstanceProfile
+      NetworkInterfaces:
+        - DeleteOnTermination: "true"
+          AssociatePublicIpAddress: "true"
+          DeviceIndex: 0
+          SubnetId: !If [CreateVPC, !Ref PublicSubnet, !Ref useSubnet]
+          GroupSet: [!Ref AlluxioSecurityGroup]
+      BlockDeviceMappings:
+        - DeviceName: /dev/sda1
+          Ebs:
+            VolumeSize: !FindInMap [ClusterSizes, !Ref clusterSize, masterDiskSize]
+            DeleteOnTermination: true
+            VolumeType: gp2
+      UserData:
+        Fn::Base64: !Sub
+          - |
+            #!/bin/bash -x
+
+            # The following command logs all stdout and stderr to a log file
+            exec > >(tee /var/log/user-data.log|logger -t user-data -s >/dev/console) 2>&1
+
+            # Install OpenJDK 1.8 and the AWS CLI
+            yum -y install java-1.8.0-openjdk-devel awscli
+            export JAVA_HOME=/usr/lib/jvm/java-1.8.0
+            export PATH=$PATH:$JAVA_HOME/bin
+            echo "export JAVA_HOME=/usr/lib/jvm/java-1.8.0" > /etc/profile.d/openjdk.sh
+            echo "export PATH=\$PATH:\$JAVA_HOME/bin" >> /etc/profile.d/openjdk.sh
+
+            statusFile=/tmp/statusfile
+
+            # Setup Alluxio Environment
+            export ALLUXIO_HOME=/opt/alluxio
+            export PATH=$PATH:$ALLUXIO_HOME/bin
+            echo "export ALLUXIO_HOME=/opt/alluxio" > /etc/profile.d/alluxio.sh
+            echo "export PATH=\$PATH:\$ALLUXIO_HOME/bin" >> /etc/profile.d/alluxio.sh
+
+            STAGING_S3_BUCKET=s3://${ALLUXIO_S3_BUCKET_NAME}
+
+            # Get his Alluxio master node's private ip address
+            THIS_IP_ADDRESS=$(curl http://169.254.169.254/latest/meta-data/local-ipv4)
+
+            # Install the AWS CLI
+            yum -y install awscli
+
+            # If this is a single node cluster, do some worker node setup too
+            #
+            #if [ ${WORKER_COUNT} == 0 ]; then
+            #fi
+
+            # Install Alluxio tar file contents
+            #
+            if [ ! -d /opt/alluxio ]; then
+
+              url=${alluxioDownloadURL}
+              [ -z $url ] && url=${DOWNLOAD_URL}
+
+              # Install Alluxio RPM
+              if [[ $url == *s3:* ]] || [[ $url == *S3:* ]]; then
+                aws s3 --region ${AWS::Region} cp $url /root/
+                tar -xvzpf /root/$(basename $url) -C /opt/
+              elif [[ $url == *http* ]] || [[ $url == *HTTP* ]]; then
+                curl -O $url
+                tar -xvzpf $(basename $url) -C /opt/
+              else
+                errmsg=" ERROR - Parameter \"alluxioDownloadURL\" not specified as either an s3:// or http:// URI. Specified as: $url "
+                echo " $errmsg"
+                echo "{ \"Status\" : \"FAILURE\", \"UniqueId\" : \"${AWS::StackName}\", \"Data\" : \"Failed\", \"Reason\" : \"$errmsg\" }" > $statusFile
+                curl -T $statusFile '${AvailabilityWaitHandle}'
+                #aws cloudformation --region ${AWS::Region} signal-resource --stack-name ${AWS::StackName} --logical-resource-id AvailabilityWaitCondition --unique-id ${AWS::StackName} --status FAILURE
+                exit -1
+              fi
+
+              if [ $? != 0 ]; then
+                echo "{ \"Status\" : \"FAILURE\", \"UniqueId\" : \"${AWS::StackName}\", \"Data\" : \"Failed\", \"Reason\" : \"Unable to download Alluxio\" }" > $statusFile
+                curl -T $statusFile '${AvailabilityWaitHandle}'
+                #aws cloudformation --region ${AWS::Region} signal-resource --stack-name ${AWS::StackName} --logical-resource-id AvailabilityWaitCondition --unique-id ${AWS::StackName} --status FAILURE
+                exit -1
+              fi
+            fi
+
+            # Add symbolic link to Alluxio install directory
+            ln -s /opt/alluxio-enterprise-2.6.0-1.0/ /opt/alluxio
+
+            # If this is a single node cluster
+            if [ ${WORKER_COUNT} == 0 ]; then
+              echo "Single EC2 instance being staged"
+              #sed -i -e "s/executor.enabled: false/executor.enabled: true/" $ALLUXIO_CONFIG_DIR/alluxio.conf
+            else
+              echo "Multiple EC2 instances being staged"
+              #sed -i -e "s/executor.enabled: true/executor.enabled: false/" $ALLUXIO_CONFIG_DIR/alluxio.conf
+            fi
+
+            # This is the master, so store the passwordless ssh private key, if supplied
+            mkdir -p ~/.ssh
+            aws s3 --region ${AWS::Region} cp $STAGING_S3_BUCKET/cloudformation/alluxio-keypair /root/.ssh/
+            if [ $? == 0 ]; then
+              chmod 400 ~/.ssh/alluxio-keypair
+
+              # Store the passwordless ssh public key to ~/.ssh/authorized_keys
+              mkdir -p !/.ssh
+              aws s3 --region ${AWS::Region} cp $STAGING_S3_BUCKET/cloudformation/alluxio-keypair.pub /root/
+              if [ $? == 0 ]; then
+                cat /root/alluxio-keypair.pub > ~/.ssh/authorized_keys 
+                chmod 400 ~/.ssh/authorized_keys
+                rm -f /root/alluxio-keypair.pub
+              fi
+            fi
+
+            # Setup the Alluxio configuration
+            #
+            cp $ALLUXIO_HOME/conf/alluxio-site.properties.template $ALLUXIO_HOME/conf/alluxio-site.properties
+
+            # Configure the Alluxio master
+            echo "alluxio.master.hostname=$THIS_IP_ADDRESS" >> $ALLUXIO_HOME/conf/alluxio-site.properties
+
+            # Configure S3 as the root under storage system (UFS)
+            echo "alluxio.master.mount.table.root.ufs=s3://${ALLUXIO_S3_BUCKET_NAME}/alluxio_ufs/" >> $ALLUXIO_HOME/conf/alluxio-site.properties
+            if [ "${ALLUXIO_S3_BUCKET_ACCESS_KEY_ID}" == "" ] || [ "${ALLUXIO_S3_BUCKET_SECRET_ACCESS_KEY}" == "" ]; then
+                echo "{ \"Status\" : \"FAILURE\", \"UniqueId\" : \"${AWS::StackName}\", \"Data\" : \"Failed\", \"Reason\" : \"alluxioS3BucketAccessKeyId not found.\" }" > $statusFile
+                curl -T $statusFile '${AvailabilityWaitHandle}'
+                exit -1
+            else
+              echo "aws.accessKeyId=${ALLUXIO_S3_BUCKET_ACCESS_KEY_ID}" >> $ALLUXIO_HOME/conf/alluxio-site.properties
+              echo "aws.secretKey=${ALLUXIO_S3_BUCKET_SECRET_ACCESS_KEY}" >> $ALLUXIO_HOME/conf/alluxio-site.properties
+            fi
+
+            # Add the hostnames of all the Alluxio worker node EC2 instances into the /etc/hosts and Alluxio conf/workers file
+            sleep 30
+            instance_ids=$(aws ec2 --region ${AWS::Region} describe-instances --query 'Reservations[*].Instances[*].InstanceId' --filters "Name=tag-key,Values=aws:cloudformation:stack-name" "Name=tag-value,Values=${AWS::StackName}" --output=text | tr '\n' ' ')
+
+            echo "" >> /etc/hosts
+            echo "# Alluxio cluster hostnames" >> /etc/hosts
+
+            rm $ALLUXIO_HOME/conf/masters
+            rm $ALLUXIO_HOME/conf/workers
+
+            for next_instance_id in $instance_ids
+            do
+              IP_ADDRESS=$(aws ec2 --region ${AWS::Region} describe-instances --query 'Reservations[*].Instances[*].PrivateIpAddress' --instance-ids $next_instance_id --output=text)
+              FQDN=$(aws ec2 --region ${AWS::Region} describe-instances --query 'Reservations[*].Instances[*].PrivateDnsName' --instance-ids $next_instance_id --output=text)
+              # Add IP address to /etc/host file
+              echo "$IP_ADDRESS     $FQDN" >> /etc/hosts
+
+              # Add IP address to conf/workers or conf/master
+              if [ "$IP_ADDRESS" == "$THIS_IP_ADDRESS" ]; then
+                echo "$IP_ADDRESS" >> $ALLUXIO_HOME/conf/masters 
+              else
+                echo "$IP_ADDRESS" >> $ALLUXIO_HOME/conf/workers 
+              fi
+            done
+
+            # Format the Alluxio journal on master node
+            $ALLUXIO_HOME/bin/alluxio formatJournal
+
+            # Start the Alluxio master processes
+            #
+            $ALLUXIO_HOME/bin/alluxio-start.sh master 
+            sleep 2
+            $ALLUXIO_HOME/bin/alluxio-start.sh job_master 
+
+            # Start the Alluxio proxy process
+            sleep 2
+            $ALLUXIO_HOME/bin/alluxio-start.sh proxy 
+
+            # Finialize install, send back status
+            #
+            until curl -Iks http://localhost:19999; do
+              echo waiting for website availability
+              sleep 2
+            done
+
+            echo "{ \"Status\" : \"SUCCESS\", \"UniqueId\" : \"${AWS::StackName}\", \"Data\" : \"Ready\", \"Reason\" : \"Website Available\" }" > $statusFile
+            curl -T $statusFile '${AvailabilityWaitHandle}'
+            #aws cloudformation --region ${AWS::Region} signal-resource --stack-name ${AWS::StackName} --logical-resource-id AvailabilityWaitCondition --unique-id ${AWS::StackName} --status SUCCESS
+
+          - DOWNLOAD_URL: !FindInMap [ Custom, Variables, "URL"]
+            MEMORY_SIZE: !FindInMap [ClusterSizes, !Ref clusterSize, masterMaxMemory]
+            ALLUXIO_S3_BUCKET_NAME: !Ref alluxioS3BucketName
+            ALLUXIO_S3_BUCKET_ACCESS_KEY_ID: !Ref alluxioS3BucketAccessKeyId
+            ALLUXIO_S3_BUCKET_SECRET_ACCESS_KEY: !Ref alluxioS3BucketSecretAccessKey
+            WORKER_COUNT: !FindInMap [ClusterSizes, !Ref clusterSize, workerCount]
+
+  AlluxioWorkerLC:
+    Type: AWS::AutoScaling::LaunchConfiguration
+    DependsOn: AlluxioMaster
+    Properties:
+      AssociatePublicIpAddress: true
+      #EbsOptimized: true
+      ImageId:
+        Fn::FindInMap:
+        - RegionMap
+        - !Ref AWS::Region
+        - AMI
+      InstanceMonitoring: true
+      InstanceType: !FindInMap [ClusterSizes, !Ref clusterSize, workerInstanceType]
+      IamInstanceProfile: !Ref AlluxioInstanceProfile
+      KeyName: !Ref keypairName
+      SecurityGroups: [!Ref AlluxioSecurityGroup]
+      BlockDeviceMappings:
+        - DeviceName: /dev/sda1
+          Ebs:
+            VolumeSize: !FindInMap [ClusterSizes, !Ref clusterSize, workerDiskSize]
+            DeleteOnTermination: true
+            VolumeType: gp2
+      UserData:
+        Fn::Base64: !Sub
+          - |
+            #!/bin/bash -x
+
+            # The following command logs all stdout and stderr to a log file
+            exec > >(tee /var/log/user-data.log|logger -t user-data -s > /dev/console) 2>&1
+
+            STAGING_S3_BUCKET=s3://${ALLUXIO_S3_BUCKET_NAME}
+
+            statusFile=/tmp/statusfile
+
+            # Install OpenJDK 1.8 and the AWS CLI
+            yum -y install java-1.8.0-openjdk-devel awscli
+            export JAVA_HOME=/usr/lib/jvm/java-1.8.0
+            export PATH=$PATH:$JAVA_HOME/bin
+            echo "export JAVA_HOME=/usr/lib/jvm/java-1.8.0" > /etc/profile.d/openjdk.sh
+            echo "export PATH=\$PATH:\$JAVA_HOME/bin" >> /etc/profile.d/openjdk.sh
+
+            # Setup Alluxio Environment
+            export ALLUXIO_HOME=/opt/alluxio
+            export PATH=$PATH:$ALLUXIO_HOME/bin
+            echo "export ALLUXIO_HOME=/opt/alluxio" > /etc/profile.d/alluxio.sh
+            echo "export PATH=\$PATH:\$ALLUXIO_HOME/bin" >> /etc/profile.d/alluxio.sh
+
+            # Install Alluxio tar file contents
+            #
+            if [ ! -d /opt/alluxio ]; then
+
+              url=${alluxioDownloadURL}
+              [ -z $url ] && url=${DOWNLOAD_URL}
+
+              # Install Alluxio RPM
+              if [[ $url == *s3:* ]] || [[ $url == *S3:* ]]; then
+                aws s3 --region ${AWS::Region} cp $url /root/
+                tar -xvzpf /root/$(basename $url) -C /opt/
+              elif [[ $url == *http* ]] || [[ $url == *HTTP* ]]; then
+                curl -O $url
+                tar -xvzpf $(basename $url) -C /opt/
+              else
+                errmsg=" ERROR - Parameter \"alluxioDownloadURL\" not specified as either an s3:// or http:// URI. Specified as: $url "
+                echo " $errmsg"
+                echo "{ \"Status\" : \"FAILURE\", \"UniqueId\" : \"${AWS::StackName}\", \"Data\" : \"Failed\", \"Reason\" : \"$errmsg\" }" > $statusFile
+                curl -T $statusFile '${AvailabilityWaitHandle}'
+                #aws cloudformation --region ${AWS::Region} signal-resource --stack-name ${AWS::StackName} --logical-resource-id AvailabilityWaitCondition --unique-id ${AWS::StackName} --status FAILURE
+                exit -1
+              fi
+
+              if [ $? != 0 ]; then
+                echo "{ \"Status\" : \"FAILURE\", \"UniqueId\" : \"${AWS::StackName}\", \"Data\" : \"Failed\", \"Reason\" : \"Unable to download Alluxio\" }" > $statusFile
+                curl -T $statusFile '${AvailabilityWaitHandle}'
+                #aws cloudformation --region ${AWS::Region} signal-resource --stack-name ${AWS::StackName} --logical-resource-id AvailabilityWaitCondition --unique-id ${AWS::StackName} --status FAILURE
+                exit -1
+              fi
+            fi
+
+            # Add symbolic link to Alluxio install directory
+            ln -s /opt/alluxio-enterprise-2.6.0-1.0/ /opt/alluxio
+
+            # Store the passwordless ssh public key to ~/.ssh/authorized_keys
+            mkdir -p !/.ssh
+            aws s3 --region ${AWS::Region} cp $STAGING_S3_BUCKET/cloudformation/alluxio-keypair.pub /root/
+            if [ $? == 0 ]; then
+              cat /root/alluxio-keypair.pub > ~/.ssh/authorized_keys
+              chmod 400 ~/.ssh/authorized_keys
+              rm -f /root/alluxio-keypair.pub
+            fi
+
+            # Setup the Alluxio configuration
+            #
+            cp $ALLUXIO_HOME/conf/alluxio-site.properties.template $ALLUXIO_HOME/conf/alluxio-site.properties
+
+            # Configure the Alluxio master
+            echo "alluxio.master.hostname=${MASTER_NODE_IP}" >> $ALLUXIO_HOME/conf/alluxio-site.properties
+
+            # Configure S3 as the root under storage system (UFS)
+            echo "alluxio.master.mount.table.root.ufs=s3://${ALLUXIO_S3_BUCKET_NAME}/alluxio_ufs/" >> $ALLUXIO_HOME/conf/alluxio-site.properties
+            if [ "${ALLUXIO_S3_BUCKET_ACCESS_KEY_ID}" == "" ] || [ "${ALLUXIO_S3_BUCKET_SECRET_ACCESS_KEY}" == "" ]; then
+                echo "{ \"Status\" : \"FAILURE\", \"UniqueId\" : \"${AWS::StackName}\", \"Data\" : \"Failed\", \"Reason\" : \"alluxioS3BucketAccessKeyId not found.\" }" > $statusFile
+                curl -T $statusFile '${AvailabilityWaitHandle}'
+                exit -1
+            else
+              echo "aws.accessKeyId=${ALLUXIO_S3_BUCKET_ACCESS_KEY_ID}" >> $ALLUXIO_HOME/conf/alluxio-site.properties
+              echo "aws.secretKey=${ALLUXIO_S3_BUCKET_SECRET_ACCESS_KEY}" >> $ALLUXIO_HOME/conf/alluxio-site.properties
+            fi
+
+            # Configure the worker's RAM disk (defaults to 2/3 of system memory)
+            #echo "alluxio.worker.ramdisk.size=XXX" >> $ALLUXIO_HOME/conf/alluxio-site.properties
+
+            # Add Alluxio master node IP address to conf/master
+            rm $ALLUXIO_HOME/conf/masters
+            rm $ALLUXIO_HOME/conf/workers
+            echo "${MASTER_NODE_IP}" >> $ALLUXIO_HOME/conf/masters
+
+            # Add the hostnames of all the Alluxio worker node EC2 instances into the /etc/hosts and Alluxio conf/workers file
+            sleep 30
+            instance_ids=$(aws ec2 --region ${AWS::Region} describe-instances --query 'Reservations[*].Instances[*].InstanceId' --filters "Name=tag-key,Values=aws:cloudformation:stack-name" "Name=tag-value,Values=${AWS::StackName}" --output=text | tr '\n' ' ')
+
+            echo "" >> /etc/hosts
+            echo "# Alluxio cluster hostnames" >> /etc/hosts
+
+            for next_instance_id in $instance_ids
+            do
+              IP_ADDRESS=$(aws ec2 --region ${AWS::Region} describe-instances --query 'Reservations[*].Instances[*].PrivateIpAddress' --instance-ids $next_instance_id --output=text)
+              FQDN=$(aws ec2 --region ${AWS::Region} describe-instances --query 'Reservations[*].Instances[*].PrivateDnsName' --instance-ids $next_instance_id --output=text)
+
+              # Add IP address to /etc/host file
+              echo "$IP_ADDRESS     $FQDN" >> /etc/hosts
+
+              if [ "$IP_ADDRESS" != "${MASTER_NODE_IP}" ]; then
+                echo "$IP_ADDRESS" >> $ALLUXIO_HOME/conf/workers
+              fi
+            done
+
+            # Start the Alluxio worker node processes
+            $ALLUXIO_HOME/bin/alluxio-mount.sh Mount local
+            sleep 2
+            $ALLUXIO_HOME/bin/alluxio-start.sh worker NoMount
+            sleep 2
+            $ALLUXIO_HOME/bin/alluxio-start.sh job_worker 
+
+            # Start the Alluxio proxy process
+            sleep 2
+            $ALLUXIO_HOME/bin/alluxio-start.sh proxy 
+
+          - MASTER_NODE_IP: !GetAtt AlluxioMaster.PrivateIp
+            DOWNLOAD_URL: !FindInMap [ Custom, Variables, "URL"]
+            MEMORY_SIZE: !FindInMap [ClusterSizes, !Ref clusterSize, masterMaxMemory]
+            ALLUXIO_S3_BUCKET_NAME: !Ref alluxioS3BucketName
+            ALLUXIO_S3_BUCKET_ACCESS_KEY_ID: !Ref alluxioS3BucketAccessKeyId
+            ALLUXIO_S3_BUCKET_SECRET_ACCESS_KEY: !Ref alluxioS3BucketSecretAccessKey
+            WORKER_COUNT: !FindInMap [ClusterSizes, !Ref clusterSize, workerCount]
+
+  AlluxioWorkerASG:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    DependsOn: AlluxioWorkerLC
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Join ["-", [!Ref "AWS::StackName", AlluxioWorker]]
+          PropagateAtLaunch: true
+          ResourceType: "auto-scaling-group"
+          ResourceId: !Ref "AWS::StackName"
+      LaunchConfigurationName: !Ref AlluxioWorkerLC
+      VPCZoneIdentifier: [!If [CreateVPC, !Ref PublicSubnet, !Ref useSubnet]]
+      DesiredCapacity: !FindInMap [ClusterSizes, !Ref clusterSize, workerCount]
+      MaxSize: !FindInMap [ClusterSizes, !Ref clusterSize, workerCount]
+      MinSize: !FindInMap [ClusterSizes, !Ref clusterSize, workerCount]
+
+Outputs:
+  AlluxioUI:
+    Description: Alluxio UI.
+    Value: !Join [ "", ["http://", !GetAtt AlluxioMaster.PublicIp, ":19999"]]
