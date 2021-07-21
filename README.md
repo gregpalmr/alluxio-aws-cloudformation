@@ -63,9 +63,9 @@ You can optionally create and upload SSH keys to be used for passwordless SSH ac
 
      $ ssh-keygen -f alluxio-keypair -t rsa -N ''
 
-     $ aws s3 cp alluxio-keypair s3://alluxio-bucket/cloudformation/
+     $ aws s3 cp alluxio-keypair s3://alluxio-bucket/cloudformation/alluxio-keypair
 
-     $ aws s3 cp alluxio-keypair.pub s3://alluxio-bucket/cloudformation/
+     $ aws s3 cp alluxio-keypair.pub s3://alluxio-bucket/cloudformation/alluxio-keypair.pub
 
 ### Step 4. Run the AWS create stack command
 
