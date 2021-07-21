@@ -139,7 +139,7 @@ If you want to destroy the cloudformation stack, you can use this command:
 
 Once the Alluxio cluster launch is complete, you can access the Alluxio Web console on the Alluxio master node. To get the IP address of the Alluxio master node, use the AWS Cloudformation console to view the "Outputs" section of the stack, or use the following AWS CLI command:
 
-     $ aws cloudformation describe-stacks --stack-name My-Alluxio-Cluster --query "Stacks[0].Outputs[?OutputKey=='AlluxiUIo'].OutputValue" --output text
+     $ aws cloudformation describe-stacks --stack-name My-Alluxio-Cluster --query "Stacks[0].Outputs[?OutputKey=='AlluxioUI'].OutputValue" --output text
 
 Use the HTTP URL displayed in the "output" and copy/paste it to your Web browser. The Alluxio Web console will show you an Overview page initially:
 
