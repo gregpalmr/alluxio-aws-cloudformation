@@ -6,7 +6,7 @@
 ### 
 ### 
 ###  Author: gregpalmr@gmail.com
-###
+### 
 AWSTemplateFormatVersion: '2010-09-09'
 Description: 'Alluxio Enterprise Edition Deployment on AWS'
 Parameters:
