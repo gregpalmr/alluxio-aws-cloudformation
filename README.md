@@ -1,6 +1,6 @@
 # alluxio-aws-cloudformation
 
-An AWS Cloudformation Template to launch an Alluxio cluster that uses S3 as the under filesystem (UFS).
+An AWS Cloudformation template to launch an Alluxio cluster that uses S3 as the under filesystem (UFS).
 
 ## Background
 
