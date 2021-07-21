@@ -145,6 +145,9 @@ Use the HTTP URL displayed in the "output" and copy/paste it to your Web browser
 
 ![Alluxio Web Console](https://github.com/gregpalmr/alluxio-aws-cloudformation/blob/main/images/alluxio-console-overview.png?raw=true)
 
+Click on the "Workers" tab link and you will see the three Alluxio worker nodes that were launched using the above example:
+
+![Alluxio Web Console](https://github.com/gregpalmr/alluxio-aws-cloudformation/blob/main/images/alluxio-console-workers.png?raw=true)
 
 ### Step 6. Run the Alluxio health checks
 
