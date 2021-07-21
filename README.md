@@ -92,7 +92,7 @@ The cloudformation template requires some user supplied options, including:
 
      https://whatismyipaddress.com/
 
-This web page will provide you with your IPv4 and IPv6 IP addresses. Use the IPv4 address and specify a CIDR like this:
+     This web page will provide you with your IPv4 and IPv6 IP addresses. Use the IPv4 address and specify a CIDR like this:
 
      67.220.95.204/24
 
