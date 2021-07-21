@@ -461,17 +461,17 @@ Resources:
 
             # This is the master, so store the passwordless ssh private key, if supplied
             mkdir -p ~/.ssh
-            aws s3 --region ${AWS::Region} cp $STAGING_S3_BUCKET/cloudformation/alluxio-keypair /root/.ssh/
+            aws s3 --region ${AWS::Region} cp $STAGING_S3_BUCKET/cloudformation/alluxio-sshkey /root/.ssh/
             if [ $? == 0 ]; then
-              chmod 400 ~/.ssh/alluxio-keypair
+              chmod 400 ~/.ssh/alluxio-sshkey
 
               # Store the passwordless ssh public key to ~/.ssh/authorized_keys
               mkdir -p !/.ssh
-              aws s3 --region ${AWS::Region} cp $STAGING_S3_BUCKET/cloudformation/alluxio-keypair.pub /root/
+              aws s3 --region ${AWS::Region} cp $STAGING_S3_BUCKET/cloudformation/alluxio-sshkey.pub /root/
               if [ $? == 0 ]; then
-                cat /root/alluxio-keypair.pub > ~/.ssh/authorized_keys 
+                cat /root/alluxio-sshkey.pub > ~/.ssh/authorized_keys 
                 chmod 400 ~/.ssh/authorized_keys
-                rm -f /root/alluxio-keypair.pub
+                rm -f /root/alluxio-sshkey.pub
               fi
             fi
 
@@ -632,11 +632,11 @@ Resources:
 
             # Store the passwordless ssh public key to ~/.ssh/authorized_keys
             mkdir -p !/.ssh
-            aws s3 --region ${AWS::Region} cp $STAGING_S3_BUCKET/cloudformation/alluxio-keypair.pub /root/
+            aws s3 --region ${AWS::Region} cp $STAGING_S3_BUCKET/cloudformation/alluxio-sshkey.pub /root/
             if [ $? == 0 ]; then
-              cat /root/alluxio-keypair.pub > ~/.ssh/authorized_keys
+              cat /root/alluxio-sshkey.pub > ~/.ssh/authorized_keys
               chmod 400 ~/.ssh/authorized_keys
-              rm -f /root/alluxio-keypair.pub
+              rm -f /root/alluxio-sshkey.pub
             fi
 
             # Setup the Alluxio configuration
