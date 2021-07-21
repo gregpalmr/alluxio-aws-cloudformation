@@ -141,7 +141,10 @@ Once the Alluxio cluster launch is complete, you can access the Alluxio Web cons
 
      $ aws cloudformation describe-stacks --stack-name My-Alluxio-Cluster --query "Stacks[0].Outputs[?OutputKey=='AlluxiUIo'].OutputValue" --output text
 
-Use the HTTP URL displayed in the "output" and copy/paste it to your Web browser.
+Use the HTTP URL displayed in the "output" and copy/paste it to your Web browser. The Alluxio Web console will show you an Overview page initially:
+
+![Alluxio Web Console](https://github.com/gregpalmr/alluxio-aws-cloudformation/blob/main/images/alluxio-console-overview.png?raw=true)
+
 
 ### Step 6. Run the Alluxio health checks
 
