@@ -448,7 +448,7 @@ Resources:
             fi
 
             # Add symbolic link to Alluxio install directory
-            ln -s /opt/alluxio-enterprise-2.6.0-1.0/ /opt/alluxio
+            ln -s /opt/alluxio-*/ /opt/alluxio
 
             # If this is a single node cluster
             if [ ${WORKER_COUNT} == 0 ]; then
@@ -628,7 +628,7 @@ Resources:
             fi
 
             # Add symbolic link to Alluxio install directory
-            ln -s /opt/alluxio-enterprise-2.6.0-1.0/ /opt/alluxio
+            ln -s /opt/alluxio-*/ /opt/alluxio
 
             # Store the passwordless ssh public key to ~/.ssh/authorized_keys
             mkdir -p !/.ssh

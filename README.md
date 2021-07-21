@@ -80,13 +80,21 @@ AWS provides a "create-stack" command to launch a coordinated infrastructure cre
 
 The cloudformation template requires some user supplied options, including:
 
+- clusterSize - The size of the Alluxio cluster to launch (see above).
+
 - useVPC - The existing VPC to use. Your AWS administrator can supply this or you can create a VPC yourself using the AWS VPC console or the AWS CLI. It should take the form of: vpc-ad49er61ba
 
 - useSubnet - The existing VPC subnet to use. Your AWS administrator can supply this or you can create a subnet using the AWS VPC console or the AWS CLI. It should take the form of: subnet-0fcea85e31ff88608
 
 - keypairName - The AWS keypair to use when launching the EC2 instances. The keypair will allow you to SSH to your EC2 instances later. Your AWS administrator can supply this or you can create a keypair using the AWS IAM console or the AWS CLI.
 
-- clusterSize - The size of the Alluxio cluster to launch (see above).
+- securityGroupInboundSourceCidr - The CIDR for which to restrict inbound access. If you set this option to "0.0.0/0", anyone on the Internet will be able to access your EC2 instances (specfically the SSH port 22 and the Alluxio Web console port 19999). It is recommended that you supply a CIDR that restricts access to your IP address or to your VPN's IP address. You can get your computer's IP address by pointing your Web browser to:
+
+     https://whatismyipaddress.com/
+
+This web page will provide you with your IPv4 and IPv6 IP addresses. Use the IPv4 address and specify a CIDR like this:
+
+     67.220.95.204/24
 
 - alluxioS3BucketName - The name of the S3 bucket that you created for Alluxio to use as an under filesystem (UFS).
 
