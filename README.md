@@ -61,11 +61,11 @@ Use your AWS S3 console or the AWS CLI to copy the Alluxio tar file to the bucke
 
 You can optionally create and upload SSH keys to be used for passwordless SSH access from the Alluxio master node to the worker nodes. Use these commands:
 
-     $ ssh-keygen -f alluxio-keypair -t rsa -N ''
+     $ ssh-keygen -f alluxio-sshkey -t rsa -N ''
 
-     $ aws s3 cp alluxio-keypair s3://alluxio-bucket/cloudformation/alluxio-keypair
+     $ aws s3 cp alluxio-sshkey s3://alluxio-bucket/cloudformation/alluxio-sshkey
 
-     $ aws s3 cp alluxio-keypair.pub s3://alluxio-bucket/cloudformation/alluxio-keypair.pub
+     $ aws s3 cp alluxio-sshkey.pub s3://alluxio-bucket/cloudformation/alluxio-sshkey.pub
 
 ### Step 4. Run the AWS create stack command
 
