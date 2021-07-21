@@ -19,7 +19,7 @@ Parameters:
     Type: String
     Description: "The type and number of machines are chosen based on the size selected."
     AllowedValues:
-      - "Single-Node"
+      #- "Single-Node"
       - "1-worker"
       - "3-small-workers"
       - "3-workers"
@@ -92,14 +92,14 @@ Mappings:
     Variables:
       URL: https://download.alluxio.com/community-server/alluxio-community-LATEST.noarch.rpm
   ClusterSizes:
-    Single-Node:
-      masterInstanceType: r5d.4xlarge
-      masterDiskSize: 300
-      masterMaxMemory: 122880
-      workerInstanceType: r5d.4xlarge
-      workerCount: 0
-      workerDiskSize: 100
-      workerMaxMemory: 122880
+    #Single-Node:
+    #  masterInstanceType: r5d.4xlarge
+    #  masterDiskSize: 300
+    #  masterMaxMemory: 122880
+    #  workerInstanceType: r5d.4xlarge
+    #  workerCount: 0
+    #  workerDiskSize: 100
+    #  workerMaxMemory: 122880
     1-worker:
       masterInstanceType: m5.2xlarge
       masterDiskSize: 200
