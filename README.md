@@ -155,7 +155,7 @@ Alluxio provides a "runTests" command to help you determine if your Alluxio clus
 
      $ ssh -i ~/.ssh/alluxio-keypair centos@<MASTER NODE IP_ADDRESS>
 
-     $ sudo su -
+     $ sudo su - alluxio
 
      $ /opt/alluxio/bin/alluxio runTests
 
