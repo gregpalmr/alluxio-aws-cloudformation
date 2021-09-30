@@ -19,7 +19,7 @@ Parameters:
     Type: String
     Description: "The type and number of machines are chosen based on the size selected."
     AllowedValues:
-      #- "Single-Node"
+      - "Single-Node"
       - "1-worker"
       - "3-small-workers"
       - "3-workers"
@@ -40,10 +40,10 @@ Parameters:
   alluxioDownloadURL:
     Type: String
     Description: "S3, HTTP or HTTPS URL to a Alluxio RPM. Leave empty to install the latest Alluxio CE release."
-    Default: "https://download.alluxio.com/community-server/alluxio-community-LATEST.noarch.rpm"
+    Default: "https://downloads.alluxio.io/downloads/files/2.6.1/alluxio-2.6.1-bin.tar.gz"
   alluxioS3BucketName:
     Type: String
-    Description: "An S3 bucket that Alluxio can use to store reflections and temporary files."
+    Description: "An S3 bucket that Alluxio can use to store files."
     Default: ""
   alluxioS3BucketAccessKeyId:
     Type: String
@@ -92,14 +92,14 @@ Mappings:
     Variables:
       URL: https://download.alluxio.com/community-server/alluxio-community-LATEST.noarch.rpm
   ClusterSizes:
-    #Single-Node:
-    #  masterInstanceType: r5d.4xlarge
-    #  masterDiskSize: 300
-    #  masterMaxMemory: 122880
-    #  workerInstanceType: r5d.4xlarge
-    #  workerCount: 0
-    #  workerDiskSize: 100
-    #  workerMaxMemory: 122880
+    Single-Node:
+      masterInstanceType: r5d.4xlarge
+      masterDiskSize: 300
+      masterMaxMemory: 122880
+      workerInstanceType: r5d.4xlarge
+      workerCount: 0
+      workerDiskSize: 100
+      workerMaxMemory: 122880
     1-worker:
       masterInstanceType: m5.2xlarge
       masterDiskSize: 200
@@ -384,20 +384,32 @@ Resources:
         Fn::Base64: !Sub
           - |
             #!/bin/bash -x
+            #
+            # Alluxio Master Node
 
             # The following command logs all stdout and stderr to a log file
             exec > >(tee /var/log/user-data.log|logger -t user-data -s >/dev/console) 2>&1
 
-            # Install OpenJDK 1.8 and the AWS CLI
-            yum -y install java-1.8.0-openjdk-devel awscli
+            statusFile=/tmp/statusfile
+
+            # Check if this is a single node cluster
+            if [ ${WORKER_COUNT} == 0 ]; then
+              echo "Single EC2 instance being staged"
+            else
+              echo "Multiple EC2 instances being staged"
+            fi
+
+            # Install OpenJDK 1.8 
+            yum -y install java-1.8.0-openjdk-devel 
             export JAVA_HOME=/usr/lib/jvm/java-1.8.0
             export PATH=$PATH:$JAVA_HOME/bin
             echo "export JAVA_HOME=/usr/lib/jvm/java-1.8.0" > /etc/profile.d/openjdk.sh
             echo "export PATH=\$PATH:\$JAVA_HOME/bin" >> /etc/profile.d/openjdk.sh
 
-            statusFile=/tmp/statusfile
+            # Install the AWS CLI
+            yum -y install awscli
 
-            # Setup Alluxio Environment
+            # Setup Alluxio Shell Environment
             export ALLUXIO_HOME=/opt/alluxio
             export PATH=$PATH:$ALLUXIO_HOME/bin
             echo "export ALLUXIO_HOME=/opt/alluxio" > /etc/profile.d/alluxio.sh
@@ -408,13 +420,20 @@ Resources:
             # Get his Alluxio master node's private ip address
             THIS_IP_ADDRESS=$(curl http://169.254.169.254/latest/meta-data/local-ipv4)
 
-            # Install the AWS CLI
-            yum -y install awscli
+            # Make sure required arguments have been provided
+            if [ "${ALLUXIO_S3_BUCKET_ACCESS_KEY_ID}" == "" ] || [ "${ALLUXIO_S3_BUCKET_SECRET_ACCESS_KEY}" == "" ]; then
+                echo "{ \"Status\" : \"FAILURE\", \"UniqueId\" : \"${AWS::StackName}\", \"Data\" : \"Failed\", \"Reason\" : \"alluxioS3BucketAccessKeyId not found.\" }" > $statusFile
+                curl -T $statusFile '${AvailabilityWaitHandle}'
+                exit -1
+            fi
 
-            # If this is a single node cluster, do some worker node setup too
-            #
-            #if [ ${WORKER_COUNT} == 0 ]; then
-            #fi
+            # Create the Alluxio user and group
+            mkdir -p /home/alluxio
+            groupadd --gid 1030 alluxio
+            useradd -d /home/alluxio --no-create-home \
+                    --uid 1030 --gid alluxio alluxio
+            chown alluxio:alluxio /home/alluxio
+            chmod g-rwx /home/alluxio && chmod o-rwx /home/alluxio
 
             # Install Alluxio tar file contents
             #
@@ -447,17 +466,11 @@ Resources:
               fi
             fi
 
+            # Chown to alluxio user
+            chown -R alluxio:alluxio /opt/alluxio-*
+
             # Add symbolic link to Alluxio install directory
             ln -s /opt/alluxio-*/ /opt/alluxio
-
-            # If this is a single node cluster
-            if [ ${WORKER_COUNT} == 0 ]; then
-              echo "Single EC2 instance being staged"
-              #sed -i -e "s/executor.enabled: false/executor.enabled: true/" $ALLUXIO_CONFIG_DIR/alluxio.conf
-            else
-              echo "Multiple EC2 instances being staged"
-              #sed -i -e "s/executor.enabled: true/executor.enabled: false/" $ALLUXIO_CONFIG_DIR/alluxio.conf
-            fi
 
             # This is the master, so store the passwordless ssh private key, if supplied
             mkdir -p ~/.ssh
@@ -475,22 +488,57 @@ Resources:
               fi
             fi
 
+            # Create the folder in the S3 bucket for the root.ufs
+            aws s3api put-object --bucket ${ALLUXIO_S3_BUCKET_NAME} --key "alluxio_ufs/${AWS::StackName}/"
+
+            # Calcluate 2/3 of RAM for the Alluxio MEM Ramdisk
+            yum -y install bc 
+            total_mem=$(grep ^MemFree /proc/meminfo | awk '{print $2}')
+            # Calculate 2/3 of the available MEM
+            twoThirdsKb=$(echo "$total_mem * 0.66" | bc --mathlib --quiet) 
+            # Convert KB to GB
+            twoThirdsGb=$(printf "%.2f\n" `echo "$twoThirdsKb / 1024 / 1024" | bc --mathlib --quiet`) 
+            # if calc didn't work, then just use 2GB for ramdisk
+            if ! [[ "$twoThirdsGb" =~ ^[0-9]+(\.[0-9]+)?$ ]]; then
+                 twoThirdsGb=2
+            fi
+            twoThirdsGb=$(printf "%.2fGB\n" $twoThirdsGb )
+
             # Setup the Alluxio configuration
             #
-            cp $ALLUXIO_HOME/conf/alluxio-site.properties.template $ALLUXIO_HOME/conf/alluxio-site.properties
-
+            cat <<EOF > $ALLUXIO_HOME/conf/alluxio-site.properties
+            # FILE: alluxio-site.properties
+            #
+            alluxio.home=/opt/alluxio
             # Configure the Alluxio master
-            echo "alluxio.master.hostname=$THIS_IP_ADDRESS" >> $ALLUXIO_HOME/conf/alluxio-site.properties
+            alluxio.master.hostname=$THIS_IP_ADDRESS
+
+            # Configure user block size and writetype
+            alluxio.user.block.size.bytes.default=16M
+            alluxio.user.file.writetype.default=MUST_CACHE
 
             # Configure S3 as the root under storage system (UFS)
-            echo "alluxio.master.mount.table.root.ufs=s3://${ALLUXIO_S3_BUCKET_NAME}/alluxio_ufs/" >> $ALLUXIO_HOME/conf/alluxio-site.properties
-            if [ "${ALLUXIO_S3_BUCKET_ACCESS_KEY_ID}" == "" ] || [ "${ALLUXIO_S3_BUCKET_SECRET_ACCESS_KEY}" == "" ]; then
-                echo "{ \"Status\" : \"FAILURE\", \"UniqueId\" : \"${AWS::StackName}\", \"Data\" : \"Failed\", \"Reason\" : \"alluxioS3BucketAccessKeyId not found.\" }" > $statusFile
-                curl -T $statusFile '${AvailabilityWaitHandle}'
-                exit -1
-            else
-              echo "aws.accessKeyId=${ALLUXIO_S3_BUCKET_ACCESS_KEY_ID}" >> $ALLUXIO_HOME/conf/alluxio-site.properties
-              echo "aws.secretKey=${ALLUXIO_S3_BUCKET_SECRET_ACCESS_KEY}" >> $ALLUXIO_HOME/conf/alluxio-site.properties
+            alluxio.master.mount.table.root.ufs=s3://${ALLUXIO_S3_BUCKET_NAME}/alluxio_ufs/${AWS::StackName}
+            aws.accessKeyId=${ALLUXIO_S3_BUCKET_ACCESS_KEY_ID}
+            aws.secretKey=${ALLUXIO_S3_BUCKET_SECRET_ACCESS_KEY}
+
+            EOF
+
+            # Add the worker node setup if this is a single node cluster
+            if [ ${WORKER_COUNT} == 0 ]; then
+
+            cat <<EOF >> $ALLUXIO_HOME/conf/alluxio-site.properties
+                  
+            # Configure 1 storage tier in Alluxio (MEM)
+            alluxio.worker.tieredstore.levels=1
+                  
+            # Configure the 1st tier to be a memory tier 
+            alluxio.worker.tieredstore.level0.alias=MEM
+            alluxio.worker.tieredstore.level0.dirs.path=/mnt/ramdisk
+            alluxio.worker.tieredstore.level0.dirs.mediumtype=MEM
+            alluxio.worker.tieredstore.level0.dirs.quota=$twoThirdsGb
+                 
+            EOF
             fi
 
             # Add the hostnames of all the Alluxio worker node EC2 instances into the /etc/hosts and Alluxio conf/workers file
@@ -519,17 +567,37 @@ Resources:
             done
 
             # Format the Alluxio journal on master node
-            $ALLUXIO_HOME/bin/alluxio formatJournal
+            su - alluxio bash -c "$ALLUXIO_HOME/bin/alluxio formatJournal"
 
             # Start the Alluxio master processes
             #
-            $ALLUXIO_HOME/bin/alluxio-start.sh master 
+            su - alluxio bash -c "$ALLUXIO_HOME/bin/alluxio-start.sh master"
             sleep 2
-            $ALLUXIO_HOME/bin/alluxio-start.sh job_master 
+            su - alluxio bash -c "$ALLUXIO_HOME/bin/alluxio-start.sh job_master"
 
             # Start the Alluxio proxy process
             sleep 2
-            $ALLUXIO_HOME/bin/alluxio-start.sh proxy 
+            su - alluxio bash -c "$ALLUXIO_HOME/bin/alluxio-start.sh proxy"
+
+            # If this is a single node cluster, start the worker node too
+            if [ ${WORKER_COUNT} == 0 ]; then
+
+                 # Mount the ram disk (as root)
+                 $ALLUXIO_HOME/bin/alluxio-mount.sh Mount local
+                 sleep 2
+
+                 # Format the Alluxio worker nodes
+                 su - alluxio bash -c "$ALLUXIO_HOME/bin/alluxio formatWorker"
+                 sleep 2
+
+                 # Start the Alluxio worker node processes
+                 su - alluxio bash -c "$ALLUXIO_HOME/bin/alluxio-start.sh worker NoMount"
+                 sleep 2
+
+                 su - alluxio bash -c "$ALLUXIO_HOME/bin/alluxio-start.sh job_worker"
+                 sleep 2
+
+            fi 
 
             # Finialize install, send back status
             #
@@ -575,26 +643,53 @@ Resources:
         Fn::Base64: !Sub
           - |
             #!/bin/bash -x
+            #
+            # Alluxio Worker Nodes
 
             # The following command logs all stdout and stderr to a log file
             exec > >(tee /var/log/user-data.log|logger -t user-data -s > /dev/console) 2>&1
 
-            STAGING_S3_BUCKET=s3://${ALLUXIO_S3_BUCKET_NAME}
-
             statusFile=/tmp/statusfile
 
-            # Install OpenJDK 1.8 and the AWS CLI
-            yum -y install java-1.8.0-openjdk-devel awscli
+            # Check if this is a single node cluster
+            if [ ${WORKER_COUNT} == 0 ]; then
+              echo "Single EC2 instance being staged"
+            else
+              echo "Multiple EC2 instances being staged"
+            fi
+
+            STAGING_S3_BUCKET=s3://${ALLUXIO_S3_BUCKET_NAME}
+
+            # Install OpenJDK 1.8 
+            yum -y install java-1.8.0-openjdk-devel
             export JAVA_HOME=/usr/lib/jvm/java-1.8.0
             export PATH=$PATH:$JAVA_HOME/bin
             echo "export JAVA_HOME=/usr/lib/jvm/java-1.8.0" > /etc/profile.d/openjdk.sh
             echo "export PATH=\$PATH:\$JAVA_HOME/bin" >> /etc/profile.d/openjdk.sh
 
-            # Setup Alluxio Environment
+            # Install the AWS CLI
+            yum -y install awscli
+
+            # Setup Alluxio Shell Environment
             export ALLUXIO_HOME=/opt/alluxio
             export PATH=$PATH:$ALLUXIO_HOME/bin
             echo "export ALLUXIO_HOME=/opt/alluxio" > /etc/profile.d/alluxio.sh
             echo "export PATH=\$PATH:\$ALLUXIO_HOME/bin" >> /etc/profile.d/alluxio.sh
+
+            # Make sure required arguments have been provided
+            if [ "${ALLUXIO_S3_BUCKET_ACCESS_KEY_ID}" == "" ] || [ "${ALLUXIO_S3_BUCKET_SECRET_ACCESS_KEY}" == "" ]; then
+                echo "{ \"Status\" : \"FAILURE\", \"UniqueId\" : \"${AWS::StackName}\", \"Data\" : \"Failed\", \"Reason\" : \"alluxioS3BucketAccessKeyId not found.\" }" > $statusFile
+                curl -T $statusFile '${AvailabilityWaitHandle}'
+                exit -1
+            fi
+
+            # Create the Alluxio user and group
+            mkdir -p /home/alluxio
+            groupadd --gid 1030 alluxio
+            useradd -d /home/alluxio --no-create-home \
+                    --uid 1030 --gid alluxio alluxio
+            chown alluxio:alluxio /home/alluxio
+            chmod g-rwx /home/alluxio && chmod o-rwx /home/alluxio
 
             # Install Alluxio tar file contents
             #
@@ -627,6 +722,9 @@ Resources:
               fi
             fi
 
+            # Chown to alluxio user
+            chown -R alluxio:alluxio /opt/alluxio-*
+
             # Add symbolic link to Alluxio install directory
             ln -s /opt/alluxio-*/ /opt/alluxio
 
@@ -639,26 +737,46 @@ Resources:
               rm -f /root/alluxio-sshkey.pub
             fi
 
+            # Calcluate 2/3 of RAM for the Alluxio MEM Ramdisk
+            yum -y install bc
+            total_mem=$(grep ^MemFree /proc/meminfo | awk '{print $2}')
+            # Calculate 2/3 of the available MEM
+            twoThirdsKb=$(echo "$total_mem * 0.66" | bc --mathlib --quiet) 
+            # Convert KB to GB
+            twoThirdsGb=$(printf "%.2f\n" `echo "$twoThirdsKb / 1024 / 1024" | bc --mathlib --quiet`) 
+            # if calc didn't work, then just use 2GB for ramdisk
+            if ! [[ "$twoThirdsGb" =~ ^[0-9]+(\.[0-9]+)?$ ]]; then
+                 twoThirdsGb=2
+            fi
+            twoThirdsGb=$(printf "%.2fGB\n" $twoThirdsGb )
+
             # Setup the Alluxio configuration
             #
-            cp $ALLUXIO_HOME/conf/alluxio-site.properties.template $ALLUXIO_HOME/conf/alluxio-site.properties
-
+            cat <<EOF > $ALLUXIO_HOME/conf/alluxio-site.properties
+            # FILE: alluxio-site.properties
+            #
+            alluxio.home=/opt/alluxio
             # Configure the Alluxio master
-            echo "alluxio.master.hostname=${MASTER_NODE_IP}" >> $ALLUXIO_HOME/conf/alluxio-site.properties
-
+            alluxio.master.hostname=${MASTER_NODE_IP}
+            
+            # Configure user block size and writetype
+            alluxio.user.block.size.bytes.default=16M
+            alluxio.user.file.writetype.default=MUST_CACHE
+            
             # Configure S3 as the root under storage system (UFS)
-            echo "alluxio.master.mount.table.root.ufs=s3://${ALLUXIO_S3_BUCKET_NAME}/alluxio_ufs/" >> $ALLUXIO_HOME/conf/alluxio-site.properties
-            if [ "${ALLUXIO_S3_BUCKET_ACCESS_KEY_ID}" == "" ] || [ "${ALLUXIO_S3_BUCKET_SECRET_ACCESS_KEY}" == "" ]; then
-                echo "{ \"Status\" : \"FAILURE\", \"UniqueId\" : \"${AWS::StackName}\", \"Data\" : \"Failed\", \"Reason\" : \"alluxioS3BucketAccessKeyId not found.\" }" > $statusFile
-                curl -T $statusFile '${AvailabilityWaitHandle}'
-                exit -1
-            else
-              echo "aws.accessKeyId=${ALLUXIO_S3_BUCKET_ACCESS_KEY_ID}" >> $ALLUXIO_HOME/conf/alluxio-site.properties
-              echo "aws.secretKey=${ALLUXIO_S3_BUCKET_SECRET_ACCESS_KEY}" >> $ALLUXIO_HOME/conf/alluxio-site.properties
-            fi
+            alluxio.master.mount.table.root.ufs=s3://${ALLUXIO_S3_BUCKET_NAME}/alluxio_ufs/${AWS::StackName}
+            aws.accessKeyId=${ALLUXIO_S3_BUCKET_ACCESS_KEY_ID}
+            aws.secretKey=${ALLUXIO_S3_BUCKET_SECRET_ACCESS_KEY}
+            
+            # Configure 1 storage tier in Alluxio (MEM)
+            alluxio.worker.tieredstore.levels=1
 
-            # Configure the worker's RAM disk (defaults to 2/3 of system memory)
-            #echo "alluxio.worker.ramdisk.size=XXX" >> $ALLUXIO_HOME/conf/alluxio-site.properties
+            # Configure the 1st tier to be a memory tier
+            alluxio.worker.tieredstore.level0.alias=MEM
+            alluxio.worker.tieredstore.level0.dirs.path=/mnt/ramdisk
+            alluxio.worker.tieredstore.level0.dirs.mediumtype=MEM
+            alluxio.worker.tieredstore.level0.dirs.quota=$twoThirdsGb
+            EOF
 
             # Add Alluxio master node IP address to conf/master
             rm $ALLUXIO_HOME/conf/masters
@@ -685,16 +803,23 @@ Resources:
               fi
             done
 
-            # Start the Alluxio worker node processes
+            # Mount the ram disk (as root)
             $ALLUXIO_HOME/bin/alluxio-mount.sh Mount local
             sleep 2
-            $ALLUXIO_HOME/bin/alluxio-start.sh worker NoMount
+
+            # Format the Alluxio worker nodes
+            su - alluxio bash -c "$ALLUXIO_HOME/bin/alluxio formatWorker"
             sleep 2
-            $ALLUXIO_HOME/bin/alluxio-start.sh job_worker 
+
+            # Start the Alluxio worker node processes
+            su - alluxio bash -c "$ALLUXIO_HOME/bin/alluxio-start.sh worker NoMount"
+            sleep 2
+
+            su - alluxio bash -c "$ALLUXIO_HOME/bin/alluxio-start.sh job_worker"
+            sleep 2
 
             # Start the Alluxio proxy process
-            sleep 2
-            $ALLUXIO_HOME/bin/alluxio-start.sh proxy 
+            su - alluxio bash -c "$ALLUXIO_HOME/bin/alluxio-start.sh proxy"
 
           - MASTER_NODE_IP: !GetAtt AlluxioMaster.PrivateIp
             DOWNLOAD_URL: !FindInMap [ Custom, Variables, "URL"]
@@ -724,3 +849,6 @@ Outputs:
   AlluxioUI:
     Description: Alluxio UI.
     Value: !Join [ "", ["http://", !GetAtt AlluxioMaster.PublicIp, ":19999"]]
+  SshToMaster:
+    Description: SSH to Alluxio master node.
+    Value: !Join [ "", ["ssh -i ~/.ssh/<my pem file> centos@", !GetAtt AlluxioMaster.PublicIp]]
