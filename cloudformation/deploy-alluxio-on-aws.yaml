@@ -51,7 +51,7 @@ Parameters:
   helperScriptsHttpLocation:
     Type: String
     Description: "The HTTP location of the cloudformation template's helper scripts"
-    Default: "https://greg-palmer-alluxio-public-bucket.s3.amazonaws.com/cloudformation/scripts"
+    Default: "https://raw.githubusercontent.com/gregpalmr/alluxio-aws-cloudformation/main/cloudformation/scripts
 Metadata:
   AWS::CloudFormation::Interface:
     ParameterGroups:
