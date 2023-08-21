@@ -90,7 +90,7 @@ EOF
     # Download the Alluxio license file, if provided
     license_url=${ALLUXIO_LICENSE_DOWNLOAD_URL}
 
-    if [[ "$license_url" != "" ]]; then
+    if [[ "$license_url" != "NONE" ]]; then
       if [[ "$license_url" == *s3:* ]] || [[ "$license_url" == *S3:* ]]; then
         aws s3 --region $AWS_REGION cp $license_url /root/license.json
         cp /root/license.json /opt/alluxio/license.json
@@ -307,6 +307,15 @@ EOF
 
   # Finalize install, and return 
   echo "Script install-alluxio.sh has completed."
+  until curl -Iks http://localhost:19999; do
+    echo waiting for Alluxio website availability on port 19999
+    sleep 5
+  done
+
+  echo "{ \"Status\" : \"SUCCESS\", \"UniqueId\" : \"${AWS::StackName}\", \"Data\" : \"Ready\", \"Reason\" : \"Website Available\" }" > $statusFile
+  curl -T $statusFile '${AvailabilityWaitHandle}'
+  #aws cloudformation --region ${AWS::Region} signal-resource --stack-name ${AWS::StackName} --logical-resource-id AvailabilityWaitCondition --unique-id ${AWS::StackName} --status SUCCESS
+
 
 # End of script
 
