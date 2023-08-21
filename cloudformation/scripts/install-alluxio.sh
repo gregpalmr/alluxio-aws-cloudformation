@@ -107,21 +107,20 @@ EOF
     fi
   fi
 
+  echo " Configuring Alluxio node type: $THIS_NODE_TYPE"
+
   # If this is a MASTER node, configure the master
   #
   if [ "$THIS_NODE_TYPE" == "master" ] || [ "$THIS_NODE_TYPE" == "MASTER" ]; then
-    echo " Configuring a master node"
 
     # Create the folder in the S3 bucket for the root.ufs
     aws s3api put-object --bucket ${ALLUXIO_S3_BUCKET_NAME} --key "alluxio_ufs/$AWS_STACK_NAME/"
-
   fi # end if THIS_NODE_TYPE = MASTER
 
   # If this is a WORKER node, setup the worker
   #
   if [ "$THIS_NODE_TYPE" == "worker" ] || [ "$THIS_NODE_TYPE" == "WORKER" ]; then
-    echo " Configuring a worker node"
-
+    echo ""
   fi # end if THIS_NODE_TYPE = WORKER
 
   # Calcluate 2/3 of RAM for the Alluxio worker node MEM Ramdisk
@@ -136,11 +135,13 @@ EOF
     twoThirdsGb=2
   fi
   twoThirdsGb=$(printf "%.2fGB\n" $twoThirdsGb )
+  echo "Calculated the RAM disk as 2/3 of available RAM: $twoThirdsGb"
 
   # Add the ip addresses of all Alluxio nodes to /etc/hosts and conf/masters, conf/workers files
   #
   sleep 30
   instance_ids=$(aws ec2 --region $AWS_REGION describe-instances --query 'Reservations[*].Instances[*].InstanceId' --filters "Name=tag-key,Values=aws:cloudformation:stack-name" "Name=tag-value,Values=${AWS::StackName}" --output=text | tr '\n' ' ')
+  echo "Got list of this cluster\'s EC2 instances: $instance_ids"
 
   # Get all the master nodes and put their ip addresses in /opt/alluxio/conf/masters 
   echo "" >> /etc/hosts
@@ -160,6 +161,7 @@ EOF
       echo "$IP_ADDRESS     $FQDN" >> /etc/hosts
 
       # Add ip address to conf/masters
+      echo "Adding master node entry to $ALLUXIO_HOME/conf/masters: $IP_ADDRESS"
       echo "$IP_ADDRESS" >> $ALLUXIO_HOME/conf/masters 
     fi 
   done 
@@ -182,6 +184,7 @@ EOF
       echo "$IP_ADDRESS     $FQDN" >> /etc/hosts
 
       # Add IP address to conf/workers
+      echo "Adding worker node entry to $ALLUXIO_HOME/conf/workers: $IP_ADDRESS"
       echo "$IP_ADDRESS" >> $ALLUXIO_HOME/conf/workers 
     fi 
   done 
