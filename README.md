@@ -127,7 +127,7 @@ Here is an example of launching the Enterprise Edition of Alluxio using the 3-wo
      $ aws cloudformation create-stack --stack-name My-Alluxio-Cluster \
         --disable-rollback \
         --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM \
-        --template-body file://./cloudformation/deploy_alluxio_on_aws.yaml \
+        --template-body file://./cloudformation/deploy-alluxio-on-aws.yaml \
         --tags "Key=Business-Unit,Value=Presales" \
                "Key=owner,Value=[CHANGE ME]" \
                "Key=Name,Value=My-Alluxio-Cluster" \
