@@ -418,11 +418,11 @@ Resources:
             statusFile=/tmp/statusfile
 
             # Download the helper scripts from the s3 bucket        
-            curl -sSLO ${HELPER_SCRIPTS_HTTP_LOCATION}/install-java.sh
-            curl -sSLO ${HELPER_SCRIPTS_HTTP_LOCATION}/install-alluxio.sh
-            curl -sSLO ${HELPER_SCRIPTS_HTTP_LOCATION}/install-prometheus.sh
-            curl -sSLO ${HELPER_SCRIPTS_HTTP_LOCATION}/install-prometheus-node-exporter.sh
-            curl -sSLO ${HELPER_SCRIPTS_HTTP_LOCATION}/install-grafana.sh
+            curl --output-dir /root/ -sSLO ${HELPER_SCRIPTS_HTTP_LOCATION}/install-java.sh
+            curl --output-dir /root/ -sSLO ${HELPER_SCRIPTS_HTTP_LOCATION}/install-alluxio.sh
+            curl --output-dir /root/ -sSLO ${HELPER_SCRIPTS_HTTP_LOCATION}/install-prometheus.sh
+            curl --output-dir /root/ -sSLO ${HELPER_SCRIPTS_HTTP_LOCATION}/install-prometheus-node-exporter.sh
+            curl --output-dir /root/ -sSLO ${HELPER_SCRIPTS_HTTP_LOCATION}/install-grafana.sh
             if [ "$?" -ne "0" ]; then
               err_msg="Unable to download helper scripts from ${HELPER_SCRIPTS_HTTP_LOCATION}/"
               echo "{ \"Status\" : \"FAILURE\", \"UniqueId\" : \"${AWS::StackName}\", \"Data\" : \"Failed\", \"Reason\" : \"$err_msg\" }" > $statusFile
@@ -438,10 +438,10 @@ Resources:
             fi
 
             # Install Java 
-            bash ./install-java.sh > /var/log/install-java.log 2>&1
+            bash /root/install-java.sh > /var/log/install-java.log 2>&1
 
             # Install Prometheus node_exporter for basic mem, cpu, disk, network stats
-            bash ./install-prometheus-node-exporter.sh > /var/log/install-prometheus-node-exporter.log 2>&1
+            bash /root/install-prometheus-node-exporter.sh > /var/log/install-prometheus-node-exporter.log 2>&1
 
             # Create variables to be passed to scripts
             # Note: only use the IMDSv2 method, becuase the IMDSv1 is usually disabled
@@ -452,8 +452,8 @@ Resources:
             THIS_NODE_TYPE=$(aws ec2 --region ${AWS::Region} describe-instances --instance-ids $THIS_INSTANCE_ID --query 'Reservations[].Instances[].Tags[?Key==`alluxio-node-type`].Value[]' --output text)
 
             # Install Alluxio
-            echo "bash ./install-alluxio.sh $THIS_NODE_TYPE ${AWS::StackName} ${AWS::Region} ${ALLUXIO_S3_BUCKET_NAME} ${INSTALLER_DOWNLOAD_URL} ${ALLUXIO_LICENSE_DOWNLOAD_URL} ${MASTER_HEAP_MEMORY_SIZE} ${WORKER_HEAP_MEMORY_SIZE} ${WORKER_COUNT}" 
-            bash ./install-alluxio.sh "$THIS_NODE_TYPE" "${AWS::StackName}" "${AWS::Region}" "${ALLUXIO_S3_BUCKET_NAME}" "${INSTALLER_DOWNLOAD_URL}" "${ALLUXIO_LICENSE_DOWNLOAD_URL}" "${MASTER_HEAP_MEMORY_SIZE}" "${WORKER_HEAP_MEMORY_SIZE}" "${WORKER_COUNT}" > /var/log/install-alluxio.log 2>&1
+            echo "bash /root/install-alluxio.sh $THIS_NODE_TYPE ${AWS::StackName} ${AWS::Region} ${ALLUXIO_S3_BUCKET_NAME} ${INSTALLER_DOWNLOAD_URL} ${ALLUXIO_LICENSE_DOWNLOAD_URL} ${MASTER_HEAP_MEMORY_SIZE} ${WORKER_HEAP_MEMORY_SIZE} ${WORKER_COUNT}" 
+            bash /root/install-alluxio.sh "$THIS_NODE_TYPE" "${AWS::StackName}" "${AWS::Region}" "${ALLUXIO_S3_BUCKET_NAME}" "${INSTALLER_DOWNLOAD_URL}" "${ALLUXIO_LICENSE_DOWNLOAD_URL}" "${MASTER_HEAP_MEMORY_SIZE}" "${WORKER_HEAP_MEMORY_SIZE}" "${WORKER_COUNT}" > /var/log/install-alluxio.log 2>&1
 
             if [ "$?" -ne 0 ]; then
               errmsg=" Script install-alluxio.sh failed. See log file at /var/log/install-alluxio.log." 
@@ -539,11 +539,11 @@ Resources:
             statusFile=/tmp/statusfile
 
             # Download the helper scripts from the s3 bucket
-            curl -sSLO ${HELPER_SCRIPTS_HTTP_LOCATION}/install-java.sh
-            curl -sSLO ${HELPER_SCRIPTS_HTTP_LOCATION}/install-alluxio.sh
-            curl -sSLO ${HELPER_SCRIPTS_HTTP_LOCATION}/install-prometheus.sh
-            curl -sSLO ${HELPER_SCRIPTS_HTTP_LOCATION}/install-prometheus-node-exporter.sh
-            curl -sSLO ${HELPER_SCRIPTS_HTTP_LOCATION}/install-grafana.sh
+            curl --output-dir /root/ -sSLO ${HELPER_SCRIPTS_HTTP_LOCATION}/install-java.sh
+            curl --output-dir /root/ -sSLO ${HELPER_SCRIPTS_HTTP_LOCATION}/install-alluxio.sh
+            curl --output-dir /root/ -sSLO ${HELPER_SCRIPTS_HTTP_LOCATION}/install-prometheus.sh
+            curl --output-dir /root/ -sSLO ${HELPER_SCRIPTS_HTTP_LOCATION}/install-prometheus-node-exporter.sh
+            curl --output-dir /root/ -sSLO ${HELPER_SCRIPTS_HTTP_LOCATION}/install-grafana.sh
             if [ "$?" -ne "0" ]; then
               err_msg="Unable to download helper scripts from ${HELPER_SCRIPTS_HTTP_LOCATION}/"
               echo "{ \"Status\" : \"FAILURE\", \"UniqueId\" : \"${AWS::StackName}\", \"Data\" : \"Failed\", \"Reason\" : \"$err_msg\" }" > $statusFile
@@ -559,10 +559,10 @@ Resources:
             fi
 
             # Install Java 
-            bash ./install-java.sh > /var/log/install-java.log 2>&1
+            bash /root/install-java.sh > /var/log/install-java.log 2>&1
 
             # Install Prometheus node_exporter for basic mem, cpu, disk, network stats
-            bash ./install-prometheus-node-exporter.sh > /var/log/install-prometheus-node-exporter.log 2>&1
+            bash /root/install-prometheus-node-exporter.sh > /var/log/install-prometheus-node-exporter.log 2>&1
 
             # Create variables to be passed to scripts
             # Note: only use the IMDSv2 method, becuase the IMDSv1 is usually disabled
@@ -573,8 +573,8 @@ Resources:
             THIS_NODE_TYPE=$(aws ec2 --region ${AWS::Region} describe-instances --instance-ids $THIS_INSTANCE_ID --query 'Reservations[].Instances[].Tags[?Key==`alluxio-node-type`].Value[]' --output text)
 
             # Install Alluxio
-            echo "bash ./install-alluxio.sh $THIS_NODE_TYPE ${AWS::StackName} ${AWS::Region} ${ALLUXIO_S3_BUCKET_NAME} ${INSTALLER_DOWNLOAD_URL} "NONE" ${MASTER_HEAP_MEMORY_SIZE} ${WORKER_HEAP_MEMORY_SIZE} ${WORKER_COUNT}" 
-            bash ./install-alluxio.sh "$THIS_NODE_TYPE" "${AWS::StackName}" "${AWS::Region}" "${ALLUXIO_S3_BUCKET_NAME}" "${INSTALLER_DOWNLOAD_URL}" "NONE" "${MASTER_HEAP_MEMORY_SIZE}" "${WORKER_HEAP_MEMORY_SIZE}" "${WORKER_COUNT}" > /var/log/install-alluxio.log 2>&1
+            echo "bash /root/install-alluxio.sh $THIS_NODE_TYPE ${AWS::StackName} ${AWS::Region} ${ALLUXIO_S3_BUCKET_NAME} ${INSTALLER_DOWNLOAD_URL} "NONE" ${MASTER_HEAP_MEMORY_SIZE} ${WORKER_HEAP_MEMORY_SIZE} ${WORKER_COUNT}" 
+            bash /root/install-alluxio.sh "$THIS_NODE_TYPE" "${AWS::StackName}" "${AWS::Region}" "${ALLUXIO_S3_BUCKET_NAME}" "${INSTALLER_DOWNLOAD_URL}" "NONE" "${MASTER_HEAP_MEMORY_SIZE}" "${WORKER_HEAP_MEMORY_SIZE}" "${WORKER_COUNT}" > /var/log/install-alluxio.log 2>&1
 
             if [ "$?" -ne 0 ]; then
               errmsg=" Script install-alluxio.sh failed. See log file at /var/log/install-alluxio.log." 
