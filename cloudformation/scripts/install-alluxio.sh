@@ -140,8 +140,8 @@ EOF
   # Add the ip addresses of all Alluxio nodes to /etc/hosts and conf/masters, conf/workers files
   #
   sleep 30
-  instance_ids=$(aws ec2 --region $AWS_REGION describe-instances --query 'Reservations[*].Instances[*].InstanceId' --filters "Name=tag-key,Values=aws:cloudformation:stack-name" "Name=tag-value,Values=${AWS::StackName}" --output=text | tr '\n' ' ')
-  echo "Got list of this cluster\'s EC2 instances: $instance_ids"
+  instance_ids=$(aws ec2 --region $AWS_REGION describe-instances --query 'Reservations[*].Instances[*].InstanceId' --filters "Name=tag-key,Values=aws:cloudformation:stack-name" "Name=tag-value,Values=${AWS_STACK_NAME}" --output=text | tr '\n' ' ')
+  echo "Got list of this cluster's EC2 instances: $instance_ids"
 
   # Get all the master nodes and put their ip addresses in /opt/alluxio/conf/masters 
   echo "" >> /etc/hosts
@@ -252,7 +252,7 @@ EOF
   alluxio.user.file.readtype.default=CACHE
 
   # Configure S3 as the root under storage system (UFS)
-  alluxio.master.mount.table.root.ufs=s3://${ALLUXIO_S3_BUCKET_NAME}/alluxio_ufs/${AWS::StackName}
+  alluxio.master.mount.table.root.ufs=s3://${ALLUXIO_S3_BUCKET_NAME}/alluxio_ufs/${alluxio.master.mount.table.root.ufs=s3://${ALLUXIO_S3_BUCKET_NAME}/alluxio_ufs/${AWS_STACK_NAME}
 
   # Configure a single storage tier in Alluxio (MEM)
   alluxio.worker.tieredstore.levels=1
@@ -315,9 +315,9 @@ EOF
     sleep 5
   done
 
-  echo "{ \"Status\" : \"SUCCESS\", \"UniqueId\" : \"${AWS::StackName}\", \"Data\" : \"Ready\", \"Reason\" : \"Website Available\" }" > $statusFile
+  echo "{ \"Status\" : \"SUCCESS\", \"UniqueId\" : \"${AWS_STACK_NAME}\", \"Data\" : \"Ready\", \"Reason\" : \"Website Available\" }" > $statusFile
   curl -T $statusFile '${AvailabilityWaitHandle}'
-  #aws cloudformation --region ${AWS::Region} signal-resource --stack-name ${AWS::StackName} --logical-resource-id AvailabilityWaitCondition --unique-id ${AWS::StackName} --status SUCCESS
+  #aws cloudformation --region AWS_REGION signal-resource --stack-name ${AWS_STACK_NAME} --logical-resource-id AvailabilityWaitCondition --unique-id ${AWS_STACK_NAME} --status SUCCESS
 
 
 # End of script
