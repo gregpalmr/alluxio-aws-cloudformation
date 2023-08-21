@@ -66,7 +66,7 @@ EOF
 
     url=${ALLUXIO_DOWNLOAD_URL}
 
-    # Install Alluxio RPM
+    # Install Alluxio from tar file
     if [[ "$url" == *s3:* ]] || [[ "$url" == *S3:* ]]; then
       aws s3 --region $AWS_REGION cp $url /root/
       tar -xzpf /root/$(basename $url) -C /opt/
@@ -252,7 +252,7 @@ EOF
   alluxio.user.file.readtype.default=CACHE
 
   # Configure S3 as the root under storage system (UFS)
-  alluxio.master.mount.table.root.ufs=s3://${ALLUXIO_S3_BUCKET_NAME}/alluxio_ufs/${alluxio.master.mount.table.root.ufs=s3://${ALLUXIO_S3_BUCKET_NAME}/alluxio_ufs/${AWS_STACK_NAME}
+  alluxio.master.mount.table.root.ufs=s3://${ALLUXIO_S3_BUCKET_NAME}/alluxio_ufs/${AWS_STACK_NAME}
 
   # Configure a single storage tier in Alluxio (MEM)
   alluxio.worker.tieredstore.levels=1
