@@ -28,7 +28,7 @@ To use this AWS Cloudformation template, you need the following:
 
      - See: https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles.html
 
-- Enough quota for the number of r5d.4xlarge EC2 instances need for your Alluxio worker nodes
+- Enough quota for the number of r5.4xlarge EC2 instances need for your Alluxio worker nodes
 
 - A working AWS CLI environment on your computer
      - See: https://docs.aws.amazon.com/cli/latest/userguide/install-cliv2.html
@@ -53,30 +53,50 @@ Download the Alluxio Enterprise or Community Edition from the Alluxio website:
 
      https://www.alluxio.io/download/
 
+Use your AWS S3 console or the AWS CLI to create a new private S3 bucket if you don't already have a bucket to use:
+
+     $ aws s3api create-bucket --bucket my-alluxio-bucket \
+            --region us-east-1 \
+            --acl private
+
 Use your AWS S3 console or the AWS CLI to copy the Alluxio tar file to the bucket. For example:
 
-     $ aws s3 cp alluxio-2.6.0-bin.tar.gz s3://alluxio-bucket/installers/
+     $ aws s3 cp alluxio-2.10.0-2.0-bin.tar.gz s3://my-alluxio-bucket/installers/
  
-### Step 3. Optionally upload SSH keys to the S3 bucket
+### Step 3. (Optional) Upload your Alluxio Enterprise Edition Licnese Key to an S3 bucket
 
-You can optionally create and upload SSH keys to be used for passwordless SSH access from the Alluxio master node to the worker nodes. Use these commands:
+If you are deploying the Enterprise Edition of Alluxio, you will require a license file, which you can obtain from the Alluxio customer support team. Upload that file to your private S3 bucket.
 
-     $ ssh-keygen -f alluxio-sshkey -t rsa -N ''
+Use your AWS S3 console or the AWS CLI to copy the Alluxio tar file to your S3 bucket. For example:
 
-     $ aws s3 cp alluxio-sshkey s3://alluxio-bucket/cloudformation/alluxio-sshkey
+     $ aws s3 cp ./alluxio-enterprise-license.json \
+                     s3://my-alluxio-bucket/installers/alluxio-enterprise-license.json
 
-     $ aws s3 cp alluxio-sshkey.pub s3://alluxio-bucket/cloudformation/alluxio-sshkey.pub
+### Step 4. Create the SSH key and AWS key-pair
 
-### Step 4. Run the AWS create stack command
+Use an SSH keygen program to create an SSH key.
+
+Windows
+
+     TBD
+
+MacOS and Linux
+
+     $ ssh-keygen -f my-alluxio-sshkey -t rsa -N ''
+
+     $ aws --region us-east-1 ec2 \
+           import-key-pair \
+           --key-name "my-alluxio-keypair" \
+           --public-key-material fileb://my-alluxio-sshkey.pub
+
+### Step 5. Run the AWS create stack command
 
 AWS provides a "create-stack" command to launch a coordinated infrastructure creation process. Use the provided Cloudformation template to launch an Alluxio cluster. The template supports mulitiple cluster sizes including:
-- 1-worker - One Alluxio master node (m5.2xlarge) and one worker node (r5d.4xlarge)
-- 3-small-workers - One Alluxio master node (t2.medium) and three worker nodes (t2.medium)
-- 3-workers - One Alluxio master node (m5.2xlarge) and three worker nodes (r5d.4xlarge)
-- 5-workers - One Alluxio master node (m5.2xlarge) and five worker nodes (r5d.4xlarge)
-- 10-workers - One Alluxio master node (m5.2xlarge) and ten worker nodes (r5d.4xlarge)
-- 25-workers - One Alluxio master node (m5.2xlarge) and twenty-five worker nodes (r5d.4xlarge)
-- 50-workers - One Alluxio master node (m5.2xlarge) and one fifty worker nodes (r5d.4xlarge)
+- 3-workers - One Alluxio master node (m5.2xlarge) and three worker nodes (r5.4xlarge)
+- 5-workers - One Alluxio master node (m5.2xlarge) and five worker nodes (r5.4xlarge)
+- 10-workers - One Alluxio master node (m5.2xlarge) and ten worker nodes (r5.4xlarge)
+- 25-workers - One Alluxio master node (m5.2xlarge) and twenty-five worker nodes (r5.4xlarge)
+- 50-workers - One Alluxio master node (m5.2xlarge) and one fifty worker nodes (r5.4xlarge)
 
 The cloudformation template requires some user supplied options, including:
 
@@ -98,13 +118,11 @@ The cloudformation template requires some user supplied options, including:
 
 - alluxioS3BucketName - The name of the S3 bucket that you created for Alluxio to use as an under filesystem (UFS).
 
-- alluxioS3BucketAccessKeyId - The aws_access_key_id to allow Alluxio to access the S3 bucket.
-
-- alluxioS3BucketSecretAccessKey - The aws_secret_access_key to allow Alluxio to access the S3 bucket.
-
 - alluxioDownloadURL - A reference to the S3 bucket location where you uploaded the Alluxio install tar file.
 
-Here is an example of launching using the 3-small-workers option:
+- alluxioLicenseDownloadURL - A reference to the S3 bucket location where you uploaded the Alluxio Enterprise Edition license file
+
+Here is an example of launching the Enterprise Edition of Alluxio using the 3-workers size:
 
      $ aws cloudformation create-stack --stack-name My-Alluxio-Cluster \
         --disable-rollback \
@@ -116,12 +134,27 @@ Here is an example of launching using the 3-small-workers option:
         --parameters ParameterKey=useVPC,ParameterValue=vpc-[CHANGE ME] \
                      ParameterKey=useSubnet,ParameterValue=subnet-[CHANGE ME] \
                      ParameterKey=securityGroupInboundSourceCidr,ParameterValue=0.0.0.0/0 \
-                     ParameterKey=keypairName,ParameterValue=My-Alluxio-Keypair \
-                     ParameterKey=clusterSize,ParameterValue=3-small-workers \
-                     ParameterKey=alluxioS3BucketName,ParameterValue=alluxio-bucket \
-                     ParameterKey=alluxioS3BucketAccessKeyId,ParameterValue=[CHANGE ME] \
-                     ParameterKey=alluxioS3BucketSecretAccessKey,ParameterValue=[CHANGE ME] \
-                     ParameterKey=alluxioDownloadURL,ParameterValue=s3://alluxio-bucket/installers/alluxio-2.6.0-bin.tar.gz
+                     ParameterKey=keypairName,ParameterValue=my-alluxio-keypair \
+                     ParameterKey=clusterSize,ParameterValue=3-workers \
+                     ParameterKey=alluxioS3BucketName,ParameterValue=my-alluxio-bucket \
+                     ParameterKey=alluxioDownloadURL,ParameterValue=s3://my-alluxio-bucket/installers/alluxio-2.10.0-2.0-bin.tar.gz \
+                     ParameterKey=alluxioLicenseDownloadURL,ParameterValue=s3://my-alluxio-bucket/installers/alluxio-enterprise-license.json
+
+Here is an example of launching the Community Edition of Alluxio using the 3-worker size:
+
+     $ aws cloudformation create-stack --stack-name My-Alluxio-Cluster \
+        --disable-rollback \
+        --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM \
+        --template-body file://./cloudformation/deploy_alluxio_on_aws.yaml \
+        --tags "Key=Business-Unit,Value=Presales" \
+               "Key=owner,Value=[CHANGE ME]" \
+               "Key=Name,Value=My-Alluxio-Cluster" \
+        --parameters ParameterKey=useVPC,ParameterValue=vpc-[CHANGE ME] \
+                     ParameterKey=useSubnet,ParameterValue=subnet-[CHANGE ME] \
+                     ParameterKey=securityGroupInboundSourceCidr,ParameterValue=0.0.0.0/0 \
+                     ParameterKey=keypairName,ParameterValue=my-alluxio-keypair \
+                     ParameterKey=clusterSize,ParameterValue=3-workers \
+                     ParameterKey=alluxioS3BucketName,ParameterValue=my-alluxio-bucket
 
 While the cloudformation stack is being launched, you can query the status using commands like this:
 
@@ -137,11 +170,13 @@ If you want to destroy the cloudformation stack, you can use this command:
 
 ### Step 5. Access the Alluxio Web console
 
-Once the Alluxio cluster launch is complete, you can access the Alluxio Web console on the Alluxio master node. To get the IP address of the Alluxio master node, use the AWS Cloudformation console to view the "Outputs" section of the stack, or use the following AWS CLI command:
+Once the Alluxio cluster launch is complete, you can access the Alluxio Web console on any of the Alluxio master nodes. To get the IP addresses of the Alluxio master nodes, use the AWS Cloudformation console to view the "Resources" section of the stack, or use the following AWS CLI command:
 
-     $ aws cloudformation describe-stacks --stack-name My-Alluxio-Cluster --query "Stacks[0].Outputs[?OutputKey=='AlluxioUI'].OutputValue" --output text
+     $ aws ec2 describe-instances --query 'Reservations[*].Instances[*].PrivateIpAddress'  --filters "Name=tag-key,Values=Name" "Name=tag-value,Values=My-Alluxio-Cluster-Alluxio-Master" --output=text
 
-Use the HTTP URL displayed in the "output" and copy/paste it to your Web browser. The Alluxio Web console will show you an Overview page initially:
+Point your Web browser to the one of the Alluxio master nodes like this:
+
+     http://[MASTER IP ADDRESS]:19999
 
 ![Alluxio Web Console](https://github.com/gregpalmr/alluxio-aws-cloudformation/blob/main/images/alluxio-console-overview.png?raw=true)
 
@@ -153,9 +188,43 @@ Click on the "Workers" tab link and you will see the three Alluxio worker nodes 
 
 Alluxio provides a "runTests" command to help you determine if your Alluxio cluster is configured and working correctly. You will have to log into the Alluxio master node and run the command. Use these commands:
 
-     $ ssh -i ~/.ssh/alluxio-keypair centos@<MASTER NODE IP_ADDRESS>
+First, run the "alluxio fsadmin report" command to see if the Alluxio master nodes and worker nodes are healthy:
+
+     $ ssh -i ~/.ssh/alluxio-keypair ec2-user@<MASTER NODE IP ADDRESS>
 
      $ sudo su - alluxio
+
+     $ alluxio fsadmin report
+
+You will see a summary output like this:
+
+    Alluxio cluster summary:
+        Master Address: 172.31.75.133:19998
+        Web Port: 19999
+        Rpc Port: 19998
+        Started: 08-21-2023 19:05:31:859
+        Uptime: 0 day(s), 0 hour(s), 1 minute(s), and 38 second(s)
+        Version: enterprise-2.10.0-2.0
+        Safe Mode: false
+        Zookeeper Enabled: false
+        Raft-based Journal: true
+        Raft Journal Addresses:
+            172.31.68.182:19200
+            172.31.68.200:19200
+            172.31.75.133:19200
+        Master Address                   State    Version
+        172.31.75.133:19998              PRIMARY  enterprise-2.10.0-2.0
+        172.31.68.200:19998              STANDBY  enterprise-2.10.0-2.0
+        172.31.68.182:19998              STANDBY  enterprise-2.10.0-2.0
+        Live Workers: 3
+        Lost Workers: 0
+        Total Capacity: 230.73GB
+            Tier: MEM  Size: 230.73GB
+        Used Capacity: 0B
+            Tier: MEM  Size: 0B
+    Free Capacity: 230.73GB
+
+You can also run the "runTests" command to test reading and writing to the under store (S3 bucket in this case):
 
      $ /opt/alluxio/bin/alluxio runTests
 
