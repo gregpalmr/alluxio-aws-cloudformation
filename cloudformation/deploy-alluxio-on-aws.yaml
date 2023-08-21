@@ -47,11 +47,7 @@ Parameters:
   alluxioLicenseDownloadURL:
     Type: String
     Description: "S3, HTTP or HTTPS URL to an Alluxio license file. Leave empty if you are installing the Community Edition."
-    Default: ""
-  helperScriptsHttpLocation:
-    Type: String
-    Description: "The HTTP location of the cloudformation template helper scripts"
-    Default: "https://raw.githubusercontent.com/gregpalmr/alluxio-aws-cloudformation/main/cloudformation/scripts"
+    Default: "NONE"
 Metadata:
   AWS::CloudFormation::Interface:
     ParameterGroups:
@@ -69,7 +65,6 @@ Metadata:
           - alluxioS3BucketName
           - alluxioInstallerDownloadURL
           - alluxioLicenseDownloadURL
-          - helperScriptsHttpLocation
       -
         Label:
           default: AWS resource configuration
@@ -87,86 +82,89 @@ Metadata:
       useVPC:
         default: "Deploy to VPC"
       alluxioInstallerDownloadURL:
-        default: "Alluxio installer download URL"
+        default: "Alluxio installer download URL. Use s3:// or http:// URL."
       alluxioLicenseDownloadURL:
-        default: "Alluxio Enterprise Edition license file download URL"
-      helperScriptsHttpLocation:
-        default: "HTTP location for this template's helper scripts"
+        default: "Alluxio Enterprise Edition license file download URL. Use s3:// or http:// URL."
 Mappings:
   Custom:
     Variables:
-      INSTALLERURL: https://downloads.alluxio.io/downloads/files/2.9.3/alluxio-2.9.3-bin.tar.gz
+      HELPERSCRIPTSURL: "https://raw.githubusercontent.com/gregpalmr/alluxio-aws-cloudformation/main/cloudformation/scripts"
   ClusterSizes:
     Single-Node:
       masterCount: 1
       masterInstanceType: r5d.4xlarge
-      masterDiskSize: 300
-      masterMaxMemory: 122880
+      masterHeapSizeGb: 22
+      masterDiskSizeGb: 300
       workerInstanceType: r5d.4xlarge
       workerCount: 0
-      workerDiskSize: 100
-      workerMaxMemory: 122880
-      monitorDiskSize: 300
+      workerHeapSizeGb: 16
+      workerDiskSizeGb: 100
     1-worker:
       masterCount: 3
-      masterInstanceType: m5.2xlarge
-      masterDiskSize: 200
-      masterMaxMemory: 28672
-      workerInstanceType: r5d.4xlarge
+      masterInstanceType: m5.2xlarge # 8 vCPUs, 32 GB RAM, no NVMe or SSDs
+      masterHeapSizeGb: 22
+      masterDiskSizeGb: 200
+      workerInstanceType: r5.4xlarge # 16 vCPUs, 128 GB RAM, no NVMe or SSDs
       workerCount: 1
-      workerDiskSize: 100
-      workerMaxMemory: 122880
-      monitorDiskSize: 300
+      workerHeapSizeGb: 16
+      workerDiskSizeGb: 100
+      monitorInstanceType: m4.xlarge 
+      monitorDiskSizeGb: 300
     3-workers:
       masterCount: 3
-      masterInstanceType: m5.2xlarge
-      masterDiskSize: 200
-      masterMaxMemory: 28672
-      workerInstanceType: r5d.4xlarge
+      masterInstanceType: m5.2xlarge # 8 vCPUs, 32 GB RAM, no NVMe or SSDs
+      masterHeapSizeGb: 22
+      masterDiskSizeGb: 200
+      workerInstanceType: r5.4xlarge # 16 vCPUs, 128 GB RAM, no NVMe or SSDs
       workerCount: 3
-      workerDiskSize: 100
-      workerMaxMemory: 122880
-      monitorDiskSize: 300
+      workerHeapSizeGb: 16
+      workerDiskSizeGb: 100
+      monitorInstanceType: m4.xlarge 
+      monitorDiskSizeGb: 300
     5-workers:
       masterCount: 3
-      masterInstanceType: m5.2xlarge
-      masterDiskSize: 200
-      masterMaxMemory: 28672
-      workerInstanceType: r5d.4xlarge
+      masterInstanceType: m5.2xlarge # 8 vCPUs, 32 GB RAM, no NVMe or SSDs
+      masterHeapSizeGb: 22
+      masterDiskSizeGb: 200
+      workerInstanceType: r5.4xlarge # 16 vCPUs, 128 GB RAM, no NVMe or SSDs
       workerCount: 5
-      workerDiskSize: 100
-      workerMaxMemory: 122880
-      monitorDiskSize: 300
+      workerHeapSizeGb: 16
+      workerDiskSizeGb: 100
+      monitorInstanceType: m4.xlarge
+      monitorDiskSizeGb: 300
     10-workers:
       masterCount: 3
-      masterInstanceType: m5.4xlarge
-      masterDiskSize: 200
-      masterMaxMemory: 61440
-      workerInstanceType: r5d.4xlarge
+      masterInstanceType: m5.2xlarge # 8 vCPUs, 32 GB RAM, no NVMe or SSDs
+      masterHeapSizeGb: 22
+      masterDiskSizeGb: 200
+      workerInstanceType: r5.4xlarge # 16 vCPUs, 128 GB RAM, no NVMe or SSDs
       workerCount: 10
-      workerDiskSize: 100
-      workerMaxMemory: 122880
-      monitorDiskSize: 300
+      workerHeapSizeGb: 16
+      workerDiskSizeGb: 100
+      monitorInstanceType: m4.xlarge
+      monitorDiskSizeGb: 300
     25-workers:
       masterCount: 3
-      masterInstanceType: m5.4xlarge
-      masterDiskSize: 200
-      masterMaxMemory: 61440
-      workerInstanceType: r5d.4xlarge
+      masterInstanceType: m5.2xlarge # 8 vCPUs, 32 GB RAM, no NVMe or SSDs
+      masterHeapSizeGb: 22
+      masterDiskSizeGb: 200
+      workerInstanceType: r5.4xlarge # 16 vCPUs, 128 GB RAM, no NVMe or SSDs
       workerCount: 25
-      workerDiskSize: 100
-      workerMaxMemory: 122880
-      monitorDiskSize: 300
+      workerHeapSizeGb: 16
+      workerDiskSizeGb: 100
+      monitorInstanceType: m4.xlarge
+      monitorDiskSizeGb: 300
     50-workers:
       masterCount: 3
-      masterInstanceType: m5.4xlarge
-      masterDiskSize: 200
-      masterMaxMemory: 61440
-      workerInstanceType: r5d.4xlarge
+      masterInstanceType: m5.2xlarge # 8 vCPUs, 32 GB RAM, no NVMe or SSDs
+      masterHeapSizeGb: 22
+      masterDiskSizeGb: 200
+      workerInstanceType: r5.4xlarge # 16 vCPUs, 128 GB RAM, no NVMe or SSDs
       workerCount: 50
-      workerDiskSize: 100
-      workerMaxMemory: 122880
-      monitorDiskSize: 300
+      workerHeapSizeGb: 16
+      workerDiskSizeGb: 100
+      monitorInstanceType: m4.xlarge
+      monitorDiskSizeGb: 300
   RegionMap:
     # Amazon Linux 2023 Images
     us-east-1: # N Virginia
@@ -403,7 +401,7 @@ Resources:
       BlockDeviceMappings:
         - DeviceName: /dev/xvda
           Ebs:
-            VolumeSize: !FindInMap [ClusterSizes, !Ref clusterSize, masterDiskSize]
+            VolumeSize: !FindInMap [ClusterSizes, !Ref clusterSize, masterDiskSizeGb]
             DeleteOnTermination: true
             Encrypted: 'false'
             VolumeType: gp2
@@ -419,14 +417,14 @@ Resources:
 
             statusFile=/tmp/statusfile
 
-            # Download the helper scripts from the s3 bucket
+            # Download the helper scripts from the s3 bucket        
             curl -sSLO ${HELPER_SCRIPTS_HTTP_LOCATION}/install-java.sh
             curl -sSLO ${HELPER_SCRIPTS_HTTP_LOCATION}/install-alluxio.sh
             curl -sSLO ${HELPER_SCRIPTS_HTTP_LOCATION}/install-prometheus.sh
             curl -sSLO ${HELPER_SCRIPTS_HTTP_LOCATION}/install-prometheus-node-exporter.sh
             curl -sSLO ${HELPER_SCRIPTS_HTTP_LOCATION}/install-grafana.sh
             if [ "$?" -ne "0" ]; then
-              err_msg="Unable to download helper scripts from $HELPER_SCRIPTS_HTTP_LOCATION/"
+              err_msg="Unable to download helper scripts from ${HELPER_SCRIPTS_HTTP_LOCATION}/"
               echo "{ \"Status\" : \"FAILURE\", \"UniqueId\" : \"${AWS::StackName}\", \"Data\" : \"Failed\", \"Reason\" : \"$err_msg\" }" > $statusFile
                curl -T $statusFile '${AvailabilityWaitHandle}'
                exit -1
@@ -454,8 +452,8 @@ Resources:
             THIS_NODE_TYPE=$(aws ec2 --region ${AWS::Region} describe-instances --instance-ids $THIS_INSTANCE_ID --query 'Reservations[].Instances[].Tags[?Key==`alluxio-node-type`].Value[]' --output text)
 
             # Install Alluxio
-            echo "bash ./install-alluxio.sh $THIS_NODE_TYPE ${AWS::StackName} ${AWS::Region} ${ALLUXIO_S3_BUCKET_NAME} ${ALLUXIO_DOWNLOAD_URL} ${ALLUXIO_LICENSE_DOWNLOAD_URL} ${MASTER_HEAP_MEMORY_SIZE} ${WORKER_HEAP_MEMORY_SIZE} ${WORKER_COUNT}" 
-            bash ./install-alluxio.sh "$THIS_NODE_TYPE" "${AWS::StackName}" "${AWS::Region}" "${ALLUXIO_S3_BUCKET_NAME}" "${ALLUXIO_DOWNLOAD_URL}" "${ALLUXIO_LICENSE_DOWNLOAD_URL}" "${MASTER_HEAP_MEMORY_SIZE}" "${WORKER_HEAP_MEMORY_SIZE}" "${WORKER_COUNT}" > /var/log/install-alluxio.log 2>&1
+            echo "bash ./install-alluxio.sh $THIS_NODE_TYPE ${AWS::StackName} ${AWS::Region} ${ALLUXIO_S3_BUCKET_NAME} ${INSTALLER_DOWNLOAD_URL} ${ALLUXIO_LICENSE_DOWNLOAD_URL} ${MASTER_HEAP_MEMORY_SIZE} ${WORKER_HEAP_MEMORY_SIZE} ${WORKER_COUNT}" 
+            bash ./install-alluxio.sh "$THIS_NODE_TYPE" "${AWS::StackName}" "${AWS::Region}" "${ALLUXIO_S3_BUCKET_NAME}" "${INSTALLER_DOWNLOAD_URL}" "${ALLUXIO_LICENSE_DOWNLOAD_URL}" "${MASTER_HEAP_MEMORY_SIZE}" "${WORKER_HEAP_MEMORY_SIZE}" "${WORKER_COUNT}" > /var/log/install-alluxio.log 2>&1
 
             if [ "$?" -ne 0 ]; then
               errmsg=" Script install-alluxio.sh failed. See log file at /var/log/install-alluxio.log." 
@@ -476,13 +474,12 @@ Resources:
             curl -T $statusFile '${AvailabilityWaitHandle}'
             #aws cloudformation --region ${AWS::Region} signal-resource --stack-name ${AWS::StackName} --logical-resource-id AvailabilityWaitCondition --unique-id ${AWS::StackName} --status SUCCESS
 
-          - HELPER_SCRIPTS_HTTP_LOCATION: !Ref helperScriptsHttpLocation
-            INSTALLER_DOWNLOAD_URL: !FindInMap [ Custom, Variables, "INSTALLERURL"]
-            MEMORY_SIZE: !FindInMap [ClusterSizes, !Ref clusterSize, masterMaxMemory]
+          - HELPER_SCRIPTS_HTTP_LOCATION: !FindInMap [ Custom, Variables, "HELPERSCRIPTSURL"]
+            INSTALLER_DOWNLOAD_URL: !Ref alluxioInstallerDownloadURL
+            ALLUXIO_LICENSE_DOWNLOAD_URL: !Ref alluxioLicenseDownloadURL
             ALLUXIO_S3_BUCKET_NAME: !Ref alluxioS3BucketName
             MASTER_COUNT: !FindInMap [ClusterSizes, !Ref clusterSize, masterCount]
             WORKER_COUNT: !FindInMap [ClusterSizes, !Ref clusterSize, workerCount]
-            ALLUXIO_LICENSE_DOWNLOAD_URL: !Ref alluxioLicenseDownloadUrl
             MASTER_HEAP_MEMORY_SIZE: !FindInMap [ClusterSizes, !Ref clusterSize, masterHeapSizeGb]
             WORKER_HEAP_MEMORY_SIZE: !FindInMap [ClusterSizes, !Ref clusterSize, workerHeapSizeGb]
 
@@ -493,6 +490,11 @@ Resources:
       Tags:
         - Key: Name
           Value: !Join ["-", [!Ref "AWS::StackName", Alluxio-Master]]
+          PropagateAtLaunch: true
+          ResourceType: "auto-scaling-group"
+          ResourceId: !Ref "AWS::StackName"
+        - Key: alluxio-node-type
+          Value: "MASTER"
           PropagateAtLaunch: true
           ResourceType: "auto-scaling-group"
           ResourceId: !Ref "AWS::StackName"
@@ -521,7 +523,7 @@ Resources:
       BlockDeviceMappings:
         - DeviceName: /dev/xvda
           Ebs:
-            VolumeSize: !FindInMap [ClusterSizes, !Ref clusterSize, workerDiskSize]
+            VolumeSize: !FindInMap [ClusterSizes, !Ref clusterSize, workerDiskSizeGb]
             DeleteOnTermination: true
             VolumeType: gp2
       UserData:
@@ -543,7 +545,7 @@ Resources:
             curl -sSLO ${HELPER_SCRIPTS_HTTP_LOCATION}/install-prometheus-node-exporter.sh
             curl -sSLO ${HELPER_SCRIPTS_HTTP_LOCATION}/install-grafana.sh
             if [ "$?" -ne "0" ]; then
-              err_msg="Unable to download helper scripts from $HELPER_SCRIPTS_HTTP_LOCATION/"
+              err_msg="Unable to download helper scripts from ${HELPER_SCRIPTS_HTTP_LOCATION}/"
               echo "{ \"Status\" : \"FAILURE\", \"UniqueId\" : \"${AWS::StackName}\", \"Data\" : \"Failed\", \"Reason\" : \"$err_msg\" }" > $statusFile
                curl -T $statusFile '${AvailabilityWaitHandle}'
                exit -1
@@ -571,8 +573,8 @@ Resources:
             THIS_NODE_TYPE=$(aws ec2 --region ${AWS::Region} describe-instances --instance-ids $THIS_INSTANCE_ID --query 'Reservations[].Instances[].Tags[?Key==`alluxio-node-type`].Value[]' --output text)
 
             # Install Alluxio
-            echo "bash ./install-alluxio.sh $THIS_NODE_TYPE ${AWS::StackName} ${AWS::Region} ${ALLUXIO_S3_BUCKET_NAME} ${ALLUXIO_DOWNLOAD_URL} ${ALLUXIO_LICENSE_DOWNLOAD_URL} ${MASTER_HEAP_MEMORY_SIZE} ${WORKER_HEAP_MEMORY_SIZE} ${WORKER_COUNT}" 
-            bash ./install-alluxio.sh "$THIS_NODE_TYPE" "${AWS::StackName}" "${AWS::Region}" "${ALLUXIO_S3_BUCKET_NAME}" "${ALLUXIO_DOWNLOAD_URL}" "${ALLUXIO_LICENSE_DOWNLOAD_URL}" "${MASTER_HEAP_MEMORY_SIZE}" "${WORKER_HEAP_MEMORY_SIZE}" "${WORKER_COUNT}" > /var/log/install-alluxio.log 2>&1
+            echo "bash ./install-alluxio.sh $THIS_NODE_TYPE ${AWS::StackName} ${AWS::Region} ${ALLUXIO_S3_BUCKET_NAME} ${INSTALLER_DOWNLOAD_URL} "NONE" ${MASTER_HEAP_MEMORY_SIZE} ${WORKER_HEAP_MEMORY_SIZE} ${WORKER_COUNT}" 
+            bash ./install-alluxio.sh "$THIS_NODE_TYPE" "${AWS::StackName}" "${AWS::Region}" "${ALLUXIO_S3_BUCKET_NAME}" "${INSTALLER_DOWNLOAD_URL}" "NONE" "${MASTER_HEAP_MEMORY_SIZE}" "${WORKER_HEAP_MEMORY_SIZE}" "${WORKER_COUNT}" > /var/log/install-alluxio.log 2>&1
 
             if [ "$?" -ne 0 ]; then
               errmsg=" Script install-alluxio.sh failed. See log file at /var/log/install-alluxio.log." 
@@ -593,13 +595,11 @@ Resources:
             curl -T $statusFile '${AvailabilityWaitHandle}'
             #aws cloudformation --region ${AWS::Region} signal-resource --stack-name ${AWS::StackName} --logical-resource-id AvailabilityWaitCondition --unique-id ${AWS::StackName} --status SUCCESS
 
-          - HELPER_SCRIPTS_HTTP_LOCATION: !Ref helperScriptsHttpLocation
-            INSTALLER_DOWNLOAD_URL: !FindInMap [ Custom, Variables, "INSTALLERURL"]
-            MEMORY_SIZE: !FindInMap [ClusterSizes, !Ref clusterSize, masterMaxMemory]
+          - HELPER_SCRIPTS_HTTP_LOCATION: !FindInMap [ Custom, Variables, "HELPERSCRIPTSURL"]
+            INSTALLER_DOWNLOAD_URL: !Ref alluxioInstallerDownloadURL
             ALLUXIO_S3_BUCKET_NAME: !Ref alluxioS3BucketName
             MASTER_COUNT: !FindInMap [ClusterSizes, !Ref clusterSize, masterCount]
             WORKER_COUNT: !FindInMap [ClusterSizes, !Ref clusterSize, workerCount]
-            ALLUXIO_LICENSE_DOWNLOAD_URL: !Ref alluxioLicenseDownloadUrl
             MASTER_HEAP_MEMORY_SIZE: !FindInMap [ClusterSizes, !Ref clusterSize, masterHeapSizeGb]
             WORKER_HEAP_MEMORY_SIZE: !FindInMap [ClusterSizes, !Ref clusterSize, workerHeapSizeGb]
 
@@ -613,6 +613,11 @@ Resources:
           PropagateAtLaunch: true
           ResourceType: "auto-scaling-group"
           ResourceId: !Ref "AWS::StackName"
+        - Key: alluxio-node-type
+          Value: "WORKER"
+          PropagateAtLaunch: true
+          ResourceType: "auto-scaling-group"
+          ResourceId: !Ref "AWS::StackName"
       LaunchConfigurationName: !Ref AlluxioWorkerLC
       VPCZoneIdentifier: [!If [CreateVPC, !Ref PublicSubnet, !Ref useSubnet]]
       DesiredCapacity: !FindInMap [ClusterSizes, !Ref clusterSize, workerCount]
@@ -623,10 +628,10 @@ Resources:
     Type: AWS::EC2::Instance
     Properties:
       Tags:
-        - Key: alluxio-node-type
-          Value: "MONITOR"
         - Key: Name
           Value: !Join ["-", [!Ref "AWS::StackName", "Alluxio-Monitor"]]
+        - Key: alluxio-node-type
+          Value: "MONITOR"
       ImageId: !FindInMap [RegionMap, !Ref "AWS::Region", AMI]
       KeyName: !Ref keypairName
       InstanceType: !FindInMap [ClusterSizes, !Ref clusterSize, monitorInstanceType]
@@ -640,7 +645,7 @@ Resources:
       BlockDeviceMappings:
         - DeviceName: /dev/xvda
           Ebs:
-            VolumeSize: !FindInMap [ClusterSizes, !Ref clusterSize, monitorDiskSize]
+            VolumeSize: !FindInMap [ClusterSizes, !Ref clusterSize, monitorDiskSizeGb]
             DeleteOnTermination: true
             VolumeType: gp2
       UserData:
