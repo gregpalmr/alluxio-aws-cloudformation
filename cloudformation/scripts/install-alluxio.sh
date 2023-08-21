@@ -69,10 +69,10 @@ EOF
     # Install Alluxio RPM
     if [[ "$url" == *s3:* ]] || [[ "$url" == *S3:* ]]; then
       aws s3 --region $AWS_REGION cp $url /root/
-      tar -xvzpf /root/$(basename $url) -C /opt/
+      tar -xzpf /root/$(basename $url) -C /opt/
     elif [[ "$url" == *http* ]] || [[ "$url" == *HTTP* ]]; then
       curl -O $url
-      tar -xvzpf $(basename $url) -C /opt/
+      tar -xzpf $(basename $url) -C /opt/
     else
       fail_with_error "Parameter \"ALLUXIO_DOWNLOAD_URL\" not specified as either an s3:// or http:// URI. Specified as: $url "
     fi
@@ -155,7 +155,7 @@ EOF
     IP_ADDRESS=$(aws ec2 --region $AWS_REGION describe-instances --query 'Reservations[*].Instances[*].PrivateIpAddress' --instance-ids $next_instance_id --filters "Name=tag-key,Values=Name" "Name=tag-value,Values=$AWS_STACK_NAME-Alluxio-Master" --output=text)
     FQDN=$(aws ec2 --region $AWS_REGION describe-instances --query 'Reservations[*].Instances[*].PrivateDnsName' --instance-ids $next_instance_id --filters "Name=tag-key,Values=Name" "Name=tag-value,Values=$AWS_STACK_NAME-Alluxio-Master" --output=text)
     
-    if [ $IP_ADDRESS != "" ]; then
+    if [ "$IP_ADDRESS" != "" ]; then
 
       # Add ip address to /etc/host file
       echo "$IP_ADDRESS     $FQDN" >> /etc/hosts
@@ -178,7 +178,7 @@ EOF
     IP_ADDRESS=$(aws ec2 --region $AWS_REGION describe-instances --query 'Reservations[*].Instances[*].PrivateIpAddress' --instance-ids $next_instance_id --filters "Name=tag-key,Values=Name" "Name=tag-value,Values=$AWS_STACK_NAME-Alluxio-Worker" --output=text)
     FQDN=$(aws ec2 --region $AWS_REGION describe-instances --query 'Reservations[*].Instances[*].PrivateDnsName' --instance-ids $next_instance_id --filters "Name=tag-key,Values=Name" "Name=tag-value,Values=$AWS_STACK_NAME-Alluxio-Worker" --output=text)
     
-    if [ $IP_ADDRESS != "" ]; then
+    if [ "$IP_ADDRESS" != "" ]; then
 
       # Add ip address to /etc/host file
       echo "$IP_ADDRESS     $FQDN" >> /etc/hosts
