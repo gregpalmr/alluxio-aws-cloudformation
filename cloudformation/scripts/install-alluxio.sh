@@ -58,7 +58,7 @@ EOF
 
   # Create the Alluxio user and group
   groupadd --gid 1030 alluxio
-  useradd --home /opt/alluxio --uid 1030 --gid alluxio alluxio
+  useradd --home /home/alluxio --uid 1030 --gid alluxio alluxio
 
   # Install Alluxio tar file contents
   #
