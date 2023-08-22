@@ -67,6 +67,7 @@ EOF
     url=${ALLUXIO_DOWNLOAD_URL}
 
     # Install Alluxio from tar file
+    echo "Downloading Alluxio install file: $url"
     if [[ "$url" == *s3:* ]] || [[ "$url" == *S3:* ]]; then
       aws s3 --region $AWS_REGION cp $url /root/
       tar -xzpf /root/$(basename $url) -C /opt/
@@ -77,8 +78,8 @@ EOF
       fail_with_error "Parameter \"ALLUXIO_DOWNLOAD_URL\" not specified as either an s3:// or http:// URI. Specified as: $url "
     fi
 
-    if [ $? != 0 ]; then
-      fail_with_error "Unable to download Alluxio install tarball."
+    if [ $? != 0 ] || [! -f /root/$(basename $url) ]; then
+      fail_with_error "Unable to download Alluxio install file: $url"
     fi
 
     # Add symbolic link to Alluxio install directory
