@@ -19,14 +19,19 @@ Parameters:
     Type: String
     Description: "The type and number of machines are chosen based on the size selected."
     AllowedValues:
-      - "Single-Node"
-      - "1-worker"
-      - "3-workers"
-      - "5-workers"
-      - "10-workers"
-      - "25-workers"
-      - "50-workers"
-    Default: "3-workers"
+      -  "1-worker-mem-cache"
+      -  "3-workers-mem-cache"
+      -  "5-workers-mem-cache"
+      - "10-workers-mem-cache"
+      - "25-workers-mem-cache"
+      - "50-workers-mem-cache"
+      -  "1-worker-nvme-cache"
+      -  "3-workers-nvme-cache"
+      -  "5-workers-nvme-cache"
+      - "10-workers-nvme-cache"
+      - "25-workers-nvme-cache"
+      - "50-workers-nvme-cache"
+    Default: "3-workers-mem-cache"
   useVPC:
     Type: AWS::EC2::VPC::Id
     Description: "VPC to deploy the cluster into."
@@ -35,7 +40,7 @@ Parameters:
     Description: "Subnet to deploy the cluster into. Must be in the selected VPC."
   securityGroupInboundSourceCidr:
     Type: String
-    Description: "The CIDR that represents that ip address range that can commicate with the Alluxio daemons via TCP ports."
+    Description: "The CIDR that represents that ip address range that can communicate with the Alluxio daemons via TCP ports."
   alluxioS3BucketName:
     Type: String
     Description: "An S3 bucket that Alluxio can use to store files."
@@ -90,79 +95,153 @@ Mappings:
     Variables:
       HELPERSCRIPTSURL: "https://raw.githubusercontent.com/gregpalmr/alluxio-aws-cloudformation/main/cloudformation/scripts"
   ClusterSizes:
-    Single-Node:
-      masterCount: 1
-      masterInstanceType: r5d.4xlarge
-      masterHeapSizeGb: 22
-      masterDiskSizeGb: 300
-      workerInstanceType: r5d.4xlarge
-      workerCount: 0
-      workerHeapSizeGb: 16
-      workerDiskSizeGb: 100
-    1-worker:
+    1-worker-mem-cache:
       masterCount: 3
       masterInstanceType: m5.2xlarge # 8 vCPUs, 32 GB RAM, no NVMe or SSDs
       masterHeapSizeGb: 22
-      masterDiskSizeGb: 200
+      masterRootDiskSizeGb: 200
       workerInstanceType: r5.4xlarge # 16 vCPUs, 128 GB RAM, no NVMe or SSDs
       workerCount: 1
       workerHeapSizeGb: 16
-      workerDiskSizeGb: 100
+      workerRootDiskSizeGb: 100
+      workerRootDiskDeviceName: /dev/xvda
       monitorInstanceType: m4.xlarge 
       monitorDiskSizeGb: 300
-    3-workers:
+    3-workers-mem-cache:
       masterCount: 3
       masterInstanceType: m5.2xlarge # 8 vCPUs, 32 GB RAM, no NVMe or SSDs
       masterHeapSizeGb: 22
-      masterDiskSizeGb: 200
+      masterRootDiskSizeGb: 200
       workerInstanceType: r5.4xlarge # 16 vCPUs, 128 GB RAM, no NVMe or SSDs
       workerCount: 3
       workerHeapSizeGb: 16
-      workerDiskSizeGb: 100
+      workerRootDiskSizeGb: 100
+      workerRootDiskDeviceName: /dev/xvda
       monitorInstanceType: m4.xlarge 
       monitorDiskSizeGb: 300
-    5-workers:
+    5-workers-mem-cache:
       masterCount: 3
       masterInstanceType: m5.2xlarge # 8 vCPUs, 32 GB RAM, no NVMe or SSDs
       masterHeapSizeGb: 22
-      masterDiskSizeGb: 200
+      masterRootDiskSizeGb: 200
+      workerRootDiskDeviceName: /dev/xvda
       workerInstanceType: r5.4xlarge # 16 vCPUs, 128 GB RAM, no NVMe or SSDs
       workerCount: 5
       workerHeapSizeGb: 16
-      workerDiskSizeGb: 100
+      workerRootDiskSizeGb: 100
+      workerRootDiskDeviceName: /dev/xvda
       monitorInstanceType: m4.xlarge
       monitorDiskSizeGb: 300
-    10-workers:
+    10-workers-mem-cache:
       masterCount: 3
       masterInstanceType: m5.2xlarge # 8 vCPUs, 32 GB RAM, no NVMe or SSDs
       masterHeapSizeGb: 22
-      masterDiskSizeGb: 200
+      masterRootDiskSizeGb: 200
+      workerRootDiskDeviceName: /dev/xvda
       workerInstanceType: r5.4xlarge # 16 vCPUs, 128 GB RAM, no NVMe or SSDs
       workerCount: 10
       workerHeapSizeGb: 16
-      workerDiskSizeGb: 100
+      workerRootDiskSizeGb: 100
       monitorInstanceType: m4.xlarge
       monitorDiskSizeGb: 300
-    25-workers:
+    25-workers-mem-cache:
       masterCount: 3
       masterInstanceType: m5.2xlarge # 8 vCPUs, 32 GB RAM, no NVMe or SSDs
       masterHeapSizeGb: 22
-      masterDiskSizeGb: 200
+      masterRootDiskSizeGb: 200
+      workerRootDiskDeviceName: /dev/xvda
       workerInstanceType: r5.4xlarge # 16 vCPUs, 128 GB RAM, no NVMe or SSDs
       workerCount: 25
       workerHeapSizeGb: 16
-      workerDiskSizeGb: 100
+      workerRootDiskSizeGb: 100
+      workerRootDiskDeviceName: /dev/xvda
       monitorInstanceType: m4.xlarge
       monitorDiskSizeGb: 300
-    50-workers:
+    50-workers-mem-cache:
       masterCount: 3
       masterInstanceType: m5.2xlarge # 8 vCPUs, 32 GB RAM, no NVMe or SSDs
       masterHeapSizeGb: 22
-      masterDiskSizeGb: 200
+      masterRootDiskSizeGb: 200
       workerInstanceType: r5.4xlarge # 16 vCPUs, 128 GB RAM, no NVMe or SSDs
       workerCount: 50
       workerHeapSizeGb: 16
-      workerDiskSizeGb: 100
+      workerRootDiskSizeGb: 100
+      workerRootDiskDeviceName: /dev/xvda
+      monitorInstanceType: m4.xlarge
+      monitorDiskSizeGb: 300
+    1-worker-nvme-cache:
+      masterCount: 3
+      masterInstanceType: m5.2xlarge # 8 vCPUs, 32 GB RAM, no NVMe or SSDs
+      masterHeapSizeGb: 22
+      masterRootDiskSizeGb: 200
+      workerInstanceType: r5d.4xlarge # 16 vCPUs, 128 GB RAM, 2x300GB NVMe
+      workerCount: 1
+      workerHeapSizeGb: 16
+      workerRootDiskSizeGb: 100
+      workerRootDiskDeviceName: /dev/sda
+      monitorInstanceType: m4.xlarge 
+      monitorDiskSizeGb: 300
+    3-workers-nvme-cache:
+      masterCount: 3
+      masterInstanceType: m5.2xlarge # 8 vCPUs, 32 GB RAM, no NVMe or SSDs
+      masterHeapSizeGb: 22
+      masterRootDiskSizeGb: 200
+      workerRootDiskDeviceName: /dev/sda
+      workerInstanceType: r5d.4xlarge # 16 vCPUs, 128 GB RAM, 2x300GB NVMe
+      workerCount: 3
+      workerHeapSizeGb: 16
+      workerRootDiskSizeGb: 100
+      workerRootDiskDeviceName: /dev/sda
+      monitorInstanceType: m4.xlarge 
+      monitorDiskSizeGb: 300
+    5-workers-nvme-cache:
+      masterCount: 3
+      masterInstanceType: m5.2xlarge # 8 vCPUs, 32 GB RAM, no NVMe or SSDs
+      masterHeapSizeGb: 22
+      masterRootDiskSizeGb: 200
+      workerRootDiskDeviceName: /dev/sda
+      workerInstanceType: r5d.4xlarge # 16 vCPUs, 128 GB RAM, 2x300GB NVMe
+      workerCount: 5
+      workerHeapSizeGb: 16
+      workerRootDiskSizeGb: 100
+      workerRootDiskDeviceName: /dev/sda
+      monitorInstanceType: m4.xlarge
+      monitorDiskSizeGb: 300
+    10-workers-nvme-cache:
+      masterCount: 3
+      masterInstanceType: m5.2xlarge # 8 vCPUs, 32 GB RAM, no NVMe or SSDs
+      masterHeapSizeGb: 22
+      masterRootDiskSizeGb: 200
+      workerRootDiskDeviceName: /dev/sda
+      workerInstanceType: r5d.4xlarge # 16 vCPUs, 128 GB RAM, 2x300GB NVMe
+      workerCount: 10
+      workerHeapSizeGb: 16
+      workerRootDiskSizeGb: 100
+      workerRootDiskDeviceName: /dev/sda
+      monitorInstanceType: m4.xlarge
+      monitorDiskSizeGb: 300
+    25-workers-nvme-cache:
+      masterCount: 3
+      masterInstanceType: m5.2xlarge # 8 vCPUs, 32 GB RAM, no NVMe or SSDs
+      masterHeapSizeGb: 22
+      masterRootDiskSizeGb: 200
+      workerRootDiskDeviceName: /dev/sda
+      workerInstanceType: r5d.4xlarge # 16 vCPUs, 128 GB RAM, 2x300GB NVMe
+      workerCount: 25
+      workerHeapSizeGb: 16
+      workerRootDiskSizeGb: 100
+      monitorInstanceType: m4.xlarge
+      monitorDiskSizeGb: 300
+    50-workers-nvme-cache:
+      masterCount: 3
+      masterInstanceType: m5.2xlarge # 8 vCPUs, 32 GB RAM, no NVMe or SSDs
+      masterHeapSizeGb: 22
+      masterRootDiskSizeGb: 200
+      workerRootDiskDeviceName: /dev/sda
+      workerInstanceType: r5d.4xlarge # 16 vCPUs, 128 GB RAM, 2x300GB NVMe
+      workerCount: 50
+      workerHeapSizeGb: 16
+      workerRootDiskSizeGb: 100
       monitorInstanceType: m4.xlarge
       monitorDiskSizeGb: 300
   RegionMap:
@@ -401,9 +480,9 @@ Resources:
       BlockDeviceMappings:
         - DeviceName: /dev/xvda
           Ebs:
-            VolumeSize: !FindInMap [ClusterSizes, !Ref clusterSize, masterDiskSizeGb]
+            VolumeSize: !FindInMap [ClusterSizes, !Ref clusterSize,  masterRootDiskSizeGb]
             DeleteOnTermination: true
-            Encrypted: 'false'
+            Encrypted: false
             VolumeType: gp2
       UserData:
         Fn::Base64: !Sub
@@ -521,10 +600,11 @@ Resources:
       KeyName: !Ref keypairName
       SecurityGroups: [!Ref AlluxioSecurityGroup]
       BlockDeviceMappings:
-        - DeviceName: /dev/xvda
+        - DeviceName: !FindInMap [ClusterSizes, !Ref clusterSize, workerRootDiskDeviceName]
           Ebs:
-            VolumeSize: !FindInMap [ClusterSizes, !Ref clusterSize, workerDiskSizeGb]
+            VolumeSize: !FindInMap [ClusterSizes, !Ref clusterSize, workerRootDiskSizeGb]
             DeleteOnTermination: true
+            Encrypted: false
             VolumeType: gp2
       UserData:
         Fn::Base64: !Sub
@@ -647,6 +727,7 @@ Resources:
           Ebs:
             VolumeSize: !FindInMap [ClusterSizes, !Ref clusterSize, monitorDiskSizeGb]
             DeleteOnTermination: true
+            Encrypted: false
             VolumeType: gp2
       UserData:
         Fn::Base64: !Sub
