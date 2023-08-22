@@ -127,7 +127,7 @@ EOF
     #
 
     # Get a list of all nvme drives
-    NVME_DISKS=$(lsblk | grep disk$ | grep nvme | awk '{print $1 }')
+    NVME_DISKS=$(lsblk | grep disk | grep nvme | awk '{print $1 }' | sort)
 
     diskno=1
 
@@ -178,6 +178,7 @@ EOF
       # Setup properties in alluxio-site.properties file
       tieredstore_level0_dirs_alias="SSD"
       tieredstore_level0_dirs_path="$tieredstore_level0_dirs_path,/nvme${diskno}"
+      tieredstore_level0_dirs_path=$(echo $tieredstore_level0_dirs_path | sed 's/^[[:blank:]]*,//')
       available_space="270GB"  # TODO: calculate this at 90 % of available disk
       tieredstore_level0_dirs_quota="$tieredstore_level0_dirs_quota,$available_space"
 
@@ -185,7 +186,7 @@ EOF
     done
 
     # If no NVMe drives were available, revert to using 2/3 of RAM for cache storage
-    if [ "$tieredstore_level0_dirs_path" == ""]; then
+    if [ "$tieredstore_level0_dirs_path" == "" ]; then
     
       # Calcluate 2/3 of RAM for the Alluxio worker node MEM Ramdisk
       yum -y install bc
