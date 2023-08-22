@@ -122,21 +122,93 @@ EOF
   #
   if [ "$THIS_NODE_TYPE" == "worker" ] || [ "$THIS_NODE_TYPE" == "WORKER" ]; then
     echo ""
+
+    # If this worker has NVMe disks, set them up for use by Alluxio worker
+    #
+
+    # Get a list of all nvme drives
+    NVME_DISKS=$(lsblk | grep disk$ | grep nvme | awk '{print $1 }')
+
+    diskno=1
+
+    for NEXT_DISK in $(echo $NVME_DISKS); do
+
+      # Skip any NVMe drives that are already mounted or have data
+      is_mounted=$(df | grep /dev/${NEXT_DISK})
+      if [ "$is_mounted" != "" ]; then
+        # This drive is mounted, skip it
+        echo " Skipping /dev/${NEXT_DISK} because is already mounted."
+        continue
+      fi
+
+      # Skip any NVMe drives that already have data in them
+      #has_data=$(file -s /dev/${NEXT_DISK} | awk '{ print $2 }')
+      #if [ "$has_data" != "data" ]; then
+      #  echo " Skipping /dev/${NEXT_DISK} because is not empty and cannot mkfs."
+      #  continue
+      #fi
+
+      echo " Making file system on /dev/${NEXT_DISK} to mount on /nvme${diskno}"
+
+      mkfs -t xfs /dev/${NEXT_DISK}
+      if [ "$?" != 0 ]; then
+        echo "Error running \"mkfs -t xfs /dev/${NEXT_DISK}\". Skipping."
+        continue
+      fi
+
+      mkdir -p /nvme${diskno}
+      mount /dev/${NEXT_DISK} /nvme${diskno}
+
+      result=$(df -h | grep ${NEXT_DISK})
+      if [ "$?" != 0 ]; then
+        echo "Error mounting /nvme${diskno} on /dev/${NEXT_DISK}\". Skipping."
+        continue
+      fi
+
+      # Get the UUID for the newly mounted disk
+      uuid=$(blkid | grep ${NEXT_DISK} | awk '{ print $2 }' | sed 's/"//g')
+      if [[ "$uuid" != *"UUID"* ]]; then
+        echo "Error getting UUID of disk /dev/${NEXT_DISK}. Skipping."
+        continue
+      fi
+
+      # Add the mount to the /etc/fstab file
+      echo "$uuid /nvme${diskno}  xfs    defaults,noatime  1   1" >> /etc/fstab
+
+      # Setup properties in alluxio-site.properties file
+      tieredstore_level0_dirs_alias="SSD"
+      tieredstore_level0_dirs_path="$tieredstore_level0_dirs_path,/nvme${diskno}"
+      available_space="270GB"  # TODO: calculate this at 90 % of available disk
+      tieredstore_level0_dirs_quota="$tieredstore_level0_dirs_quota,$available_space"
+
+      diskno=$((diskno += 1))
+    done
+
+    # If no NVMe drives were available, revert to using 2/3 of RAM for cache storage
+    if [ "$tieredstore_level0_dirs_path" == ""]; then
+    
+      # Calcluate 2/3 of RAM for the Alluxio worker node MEM Ramdisk
+      yum -y install bc
+      total_mem=$(grep ^MemFree /proc/meminfo | awk '{print $2}')
+      # Calculate 2/3 of the available MEM
+      twoThirdsKb=$(echo "$total_mem * 0.66" | bc --mathlib --quiet)
+      # Convert KB to GB
+      twoThirdsGb=$(printf "%.2f\n" `echo "$twoThirdsKb / 1024 / 1024" | bc --mathlib --quiet`)
+      # if calc didn't work, then just use 2GB for ramdisk
+      if ! [[ "$twoThirdsGb" =~ ^[0-9]+(\.[0-9]+)?$ ]]; then
+        twoThirdsGb=2
+      fi
+      twoThirdsGb=$(printf "%.2fGB\n" $twoThirdsGb )
+      echo "Calculated the RAM disk as 2/3 of available RAM: $twoThirdsGb"
+
+      tieredstore_level0_dirs_alias=MEM
+      tieredstore_level0_dirs_path="/mnt/ramdisk"
+      tieredstore_level0_dirs_quota="$twoThirdsGb"
+
+    fi
+
   fi # end if THIS_NODE_TYPE = WORKER
 
-  # Calcluate 2/3 of RAM for the Alluxio worker node MEM Ramdisk
-  yum -y install bc
-  total_mem=$(grep ^MemFree /proc/meminfo | awk '{print $2}')
-  # Calculate 2/3 of the available MEM
-  twoThirdsKb=$(echo "$total_mem * 0.66" | bc --mathlib --quiet)
-  # Convert KB to GB
-  twoThirdsGb=$(printf "%.2f\n" `echo "$twoThirdsKb / 1024 / 1024" | bc --mathlib --quiet`)
-  # if calc didn't work, then just use 2GB for ramdisk
-  if ! [[ "$twoThirdsGb" =~ ^[0-9]+(\.[0-9]+)?$ ]]; then
-    twoThirdsGb=2
-  fi
-  twoThirdsGb=$(printf "%.2fGB\n" $twoThirdsGb )
-  echo "Calculated the RAM disk as 2/3 of available RAM: $twoThirdsGb"
 
   # Add the ip addresses of all Alluxio nodes to /etc/hosts and conf/masters, conf/workers files
   #
@@ -255,14 +327,13 @@ EOF
   # Configure S3 as the root under storage system (UFS)
   alluxio.master.mount.table.root.ufs=s3://${ALLUXIO_S3_BUCKET_NAME}/alluxio_ufs/${AWS_STACK_NAME}
 
-  # Configure a single storage tier in Alluxio (MEM)
+  # Configure a single storage tier in Alluxio (MEM or NVMe/SSD)
   alluxio.worker.tieredstore.levels=1
         
-  # Configure the tier to be a memory tier 
-  alluxio.worker.tieredstore.level0.alias=MEM
-  alluxio.worker.tieredstore.level0.dirs.path=/mnt/ramdisk
-  alluxio.worker.tieredstore.level0.dirs.mediumtype=MEM
-  alluxio.worker.tieredstore.level0.dirs.quota=$twoThirdsGb
+  # Configure the worker cache tiers  
+  alluxio.worker.tieredstore.level0.alias=$tieredstore_level0_dirs_alias
+  alluxio.worker.tieredstore.level0.dirs.path=$tieredstore_level0_dirs_path
+  alluxio.worker.tieredstore.level0.dirs.quota=$tieredstore_level0_dirs_quota
 
 EOF
 
