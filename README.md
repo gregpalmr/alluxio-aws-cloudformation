@@ -4,7 +4,7 @@ An AWS Cloudformation template to launch an Alluxio cluster that uses S3 as the 
 
 ## Background
 
-This AWS Cloudformation template launches Alluxio on AWS Infrastructure and creates the following resources:
+This AWS CloudFormation template launches Alluxio on AWS Infrastructure and creates the following resources:
 
 - EC2 Instances (m5.2xlarge for Alluxio masters, r5d.4xlarge for Alluxio workers)
 - Auto Scaling Group for Alluxio workers
@@ -16,7 +16,7 @@ This template launches one Alluxio master node, and a number of Alluxio worker n
 
 ## Prerequisites
 
-To use this AWS Cloudformation template, you need the following:
+To use this AWS CloudFormation template, you need the following:
 
 - A valid AWS account with the following IAM role policies:
      - AmazonEC2FullAccess
@@ -24,7 +24,7 @@ To use this AWS Cloudformation template, you need the following:
 
      or
 
-     - Enough permissions to launch a cloudformation stack and access an S3 bucket
+     - Enough permissions to launch a CloudFormation stack and access an S3 bucket
 
      - See: https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles.html
 
@@ -91,14 +91,27 @@ MacOS and Linux
 
 ### Step 5. Run the AWS create stack command
 
-AWS provides a "create-stack" command to launch a coordinated infrastructure creation process. Use the provided Cloudformation template to launch an Alluxio cluster. The template supports mulitiple cluster sizes including:
-- 3-workers - One Alluxio master node (m5.2xlarge) and three worker nodes (r5.4xlarge)
-- 5-workers - One Alluxio master node (m5.2xlarge) and five worker nodes (r5.4xlarge)
-- 10-workers - One Alluxio master node (m5.2xlarge) and ten worker nodes (r5.4xlarge)
-- 25-workers - One Alluxio master node (m5.2xlarge) and twenty-five worker nodes (r5.4xlarge)
-- 50-workers - One Alluxio master node (m5.2xlarge) and one fifty worker nodes (r5.4xlarge)
+AWS provides a "create-stack" command to launch a coordinated infrastructure creation process. Use the provided CloudFormation template to launch an Alluxio cluster. This Alluxio CloudFormation template supports multiple cluster sizes including the following:
 
-The cloudformation template requires some user supplied options, including:
+Alluxio can cache data in memory or on NVMe or SSD storage. To deploy an Alluxio cluster that caches data to a RAM disk that is 2/3 the size of available memory, use the following clusterSize parameters:
+
+- 1-workers-mem-cache  - 3 Alluxio master nodes (m5.2xlarge) and 1 worker nodes (r5.4xlarge)
+- 3-workers-mem-cache  - 3 Alluxio master nodes (m5.2xlarge) and 3 worker nodes (r5.4xlarge)
+- 5-workers-mem-cache  - 3 Alluxio master nodes (m5.2xlarge) and 5 worker nodes (r5.4xlarge)
+- 10-workers-mem-cache - 3 Alluxio master nodes (m5.2xlarge) and 10 worker nodes (r5.4xlarge)
+- 25-workers-mem-cache - 3 Alluxio master nodes (m5.2xlarge) and 25 worker nodes (r5.4xlarge)
+- 50-workers-mem-cache - 3 Alluxio master nodes (m5.2xlarge) and 50 worker nodes (r5.4xlarge)
+
+To deploy an Alluxio cluster that caches data to two 300 GB NVMe disks, use the following clusterSize parameters:
+
+- 1-workers-nvme-cache  - 3 Alluxio master nodes (m5.2xlarge) and 1 worker nodes (r5d.4xlarge)
+- 3-workers-nvme-cache  - 3 Alluxio master nodes (m5.2xlarge) and 3 worker nodes (r5d.4xlarge)
+- 5-workers-nvme-cache  - 3 Alluxio master nodes (m5.2xlarge) and 5 worker nodes (r5d.4xlarge)
+- 10-workers-nvme-cache - 3 Alluxio master nodes (m5.2xlarge) and 10 worker nodes (r5d.4xlarge)
+- 25-workers-nvme-cache - 3 Alluxio master nodes (m5.2xlarge) and 25 worker nodes (r5d.4xlarge)
+- 50-workers-nvme-cache - 3 Alluxio master nodes (m5.2xlarge) and 50 worker nodes (r5d.4xlarge)
+
+The CloudFormation template requires some user supplied options, including:
 
 - clusterSize - The size of the Alluxio cluster to launch (see above).
 
@@ -156,7 +169,7 @@ Here is an example of launching the Community Edition of Alluxio using the 3-wor
                      ParameterKey=clusterSize,ParameterValue=3-workers \
                      ParameterKey=alluxioS3BucketName,ParameterValue=my-alluxio-bucket
 
-While the cloudformation stack is being launched, you can query the status using commands like this:
+While the CloudFormation stack is being launched, you can query the status using commands like this:
 
      $ aws cloudformation describe-stacks --stack-name My-Alluxio-Cluster
 
@@ -170,7 +183,7 @@ If you want to destroy the cloudformation stack, you can use this command:
 
 ### Step 5. Access the Alluxio Web console
 
-Once the Alluxio cluster launch is complete, you can access the Alluxio Web console on any of the Alluxio master nodes. To get the IP addresses of the Alluxio master nodes, use the AWS Cloudformation console to view the "Resources" section of the stack, or use the following AWS CLI command:
+Once the Alluxio cluster launch is complete, you can access the Alluxio Web console on any of the Alluxio master nodes. To get the IP addresses of the Alluxio master nodes, use the AWS CloudFormation console to view the "Resources" section of the stack, or use the following AWS CLI command:
 
      $ aws ec2 describe-instances --query 'Reservations[*].Instances[*].PrivateIpAddress'  --filters "Name=tag-key,Values=Name" "Name=tag-value,Values=My-Alluxio-Cluster-Alluxio-Master" --output=text
 
@@ -238,5 +251,5 @@ You can view the files that were created by the Alluxio runTests command by clic
 
 ### Summary
 
-This github repo provides a cloudformation template to quickly launch an Alluxio cluster in an AWS environment. If you have any questions or comments, please direct them to gregpalmr@gmail.com
+This github repo provides a CloudFormation template to quickly launch an Alluxio cluster in an AWS environment. If you have any questions or comments, please direct them to gregpalmr@gmail.com
 
