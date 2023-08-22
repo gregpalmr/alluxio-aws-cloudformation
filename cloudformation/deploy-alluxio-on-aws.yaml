@@ -178,7 +178,7 @@ Mappings:
       workerCount: 1
       workerHeapSizeGb: 16
       workerRootDiskSizeGb: 100
-      workerRootDiskDeviceName: /dev/sda
+      workerRootDiskDeviceName: /dev/xvda
       monitorInstanceType: m4.xlarge 
       monitorDiskSizeGb: 300
     3-workers-nvme-cache:
@@ -186,12 +186,12 @@ Mappings:
       masterInstanceType: m5.2xlarge # 8 vCPUs, 32 GB RAM, no NVMe or SSDs
       masterHeapSizeGb: 22
       masterRootDiskSizeGb: 200
-      workerRootDiskDeviceName: /dev/sda
+      workerRootDiskDeviceName: /dev/xvda
       workerInstanceType: r5d.4xlarge # 16 vCPUs, 128 GB RAM, 2x300GB NVMe
       workerCount: 3
       workerHeapSizeGb: 16
       workerRootDiskSizeGb: 100
-      workerRootDiskDeviceName: /dev/sda
+      workerRootDiskDeviceName: /dev/xvda
       monitorInstanceType: m4.xlarge 
       monitorDiskSizeGb: 300
     5-workers-nvme-cache:
@@ -199,12 +199,12 @@ Mappings:
       masterInstanceType: m5.2xlarge # 8 vCPUs, 32 GB RAM, no NVMe or SSDs
       masterHeapSizeGb: 22
       masterRootDiskSizeGb: 200
-      workerRootDiskDeviceName: /dev/sda
+      workerRootDiskDeviceName: /dev/xvda
       workerInstanceType: r5d.4xlarge # 16 vCPUs, 128 GB RAM, 2x300GB NVMe
       workerCount: 5
       workerHeapSizeGb: 16
       workerRootDiskSizeGb: 100
-      workerRootDiskDeviceName: /dev/sda
+      workerRootDiskDeviceName: /dev/xvda
       monitorInstanceType: m4.xlarge
       monitorDiskSizeGb: 300
     10-workers-nvme-cache:
@@ -212,12 +212,12 @@ Mappings:
       masterInstanceType: m5.2xlarge # 8 vCPUs, 32 GB RAM, no NVMe or SSDs
       masterHeapSizeGb: 22
       masterRootDiskSizeGb: 200
-      workerRootDiskDeviceName: /dev/sda
+      workerRootDiskDeviceName: /dev/xvda
       workerInstanceType: r5d.4xlarge # 16 vCPUs, 128 GB RAM, 2x300GB NVMe
       workerCount: 10
       workerHeapSizeGb: 16
       workerRootDiskSizeGb: 100
-      workerRootDiskDeviceName: /dev/sda
+      workerRootDiskDeviceName: /dev/xvda
       monitorInstanceType: m4.xlarge
       monitorDiskSizeGb: 300
     25-workers-nvme-cache:
@@ -225,7 +225,7 @@ Mappings:
       masterInstanceType: m5.2xlarge # 8 vCPUs, 32 GB RAM, no NVMe or SSDs
       masterHeapSizeGb: 22
       masterRootDiskSizeGb: 200
-      workerRootDiskDeviceName: /dev/sda
+      workerRootDiskDeviceName: /dev/xvda
       workerInstanceType: r5d.4xlarge # 16 vCPUs, 128 GB RAM, 2x300GB NVMe
       workerCount: 25
       workerHeapSizeGb: 16
@@ -237,7 +237,7 @@ Mappings:
       masterInstanceType: m5.2xlarge # 8 vCPUs, 32 GB RAM, no NVMe or SSDs
       masterHeapSizeGb: 22
       masterRootDiskSizeGb: 200
-      workerRootDiskDeviceName: /dev/sda
+      workerRootDiskDeviceName: /dev/xvda
       workerInstanceType: r5d.4xlarge # 16 vCPUs, 128 GB RAM, 2x300GB NVMe
       workerCount: 50
       workerHeapSizeGb: 16
@@ -654,7 +654,7 @@ Resources:
 
             # Install Alluxio
             echo "bash /root/install-alluxio.sh $THIS_NODE_TYPE ${AWS::StackName} ${AWS::Region} ${ALLUXIO_S3_BUCKET_NAME} ${INSTALLER_DOWNLOAD_URL} "NONE" ${MASTER_HEAP_MEMORY_SIZE} ${WORKER_HEAP_MEMORY_SIZE} ${WORKER_COUNT}" 
-            bash /root/install-alluxio.sh "$THIS_NODE_TYPE" "${AWS::StackName}" "${AWS::Region}" "${ALLUXIO_S3_BUCKET_NAME}" "${INSTALLER_DOWNLOAD_URL}" "NONE" "${MASTER_HEAP_MEMORY_SIZE}" "${WORKER_HEAP_MEMORY_SIZE}" "${WORKER_COUNT}" > /var/log/install-alluxio.log 2>&1
+            bash -x /root/install-alluxio.sh "$THIS_NODE_TYPE" "${AWS::StackName}" "${AWS::Region}" "${ALLUXIO_S3_BUCKET_NAME}" "${INSTALLER_DOWNLOAD_URL}" "NONE" "${MASTER_HEAP_MEMORY_SIZE}" "${WORKER_HEAP_MEMORY_SIZE}" "${WORKER_COUNT}" > /var/log/install-alluxio.log 2>&1
 
             if [ "$?" -ne 0 ]; then
               errmsg=" Script install-alluxio.sh failed. See log file at /var/log/install-alluxio.log." 
