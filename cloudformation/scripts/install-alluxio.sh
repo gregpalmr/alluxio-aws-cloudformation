@@ -58,7 +58,7 @@ EOF
 
   # Create the Alluxio user and group
   groupadd --gid 1030 alluxio
-  useradd --home /opt/alluxio --no-create-home --uid 1030 --gid alluxio alluxio
+  useradd --home /opt/alluxio --uid 1030 --gid alluxio alluxio
 
   # Install Alluxio tar file contents
   #
@@ -310,15 +310,6 @@ EOF
 
   # Finalize install, and return 
   echo "Script install-alluxio.sh has completed."
-  until curl -Iks http://localhost:19999; do
-    echo waiting for Alluxio website availability on port 19999
-    sleep 5
-  done
-
-  echo "{ \"Status\" : \"SUCCESS\", \"UniqueId\" : \"${AWS_STACK_NAME}\", \"Data\" : \"Ready\", \"Reason\" : \"Website Available\" }" > $statusFile
-  curl -T $statusFile '${AvailabilityWaitHandle}'
-  #aws cloudformation --region AWS_REGION signal-resource --stack-name ${AWS_STACK_NAME} --logical-resource-id AvailabilityWaitCondition --unique-id ${AWS_STACK_NAME} --status SUCCESS
-
 
 # End of script
 
