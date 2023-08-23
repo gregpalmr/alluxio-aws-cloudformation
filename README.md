@@ -135,7 +135,7 @@ The CloudFormation template requires some user supplied options, including:
 
 - alluxioLicenseDownloadURL - A reference to the S3 bucket location where you uploaded the Alluxio Enterprise Edition license file
 
-Here is an example of launching the Enterprise Edition of Alluxio using the 3-workers size:
+Here is an example of launching the Enterprise Edition of Alluxio using the 3-workers-mem-cache clusterSize parameter which launches an Alluxio cluster with 3 masters nodes, 3 worker nodes that only cache data to a RAM disk and one monitor node for Prometheus and Grafana dashboards:
 
      $ aws cloudformation create-stack --stack-name My-Alluxio-Cluster \
         --disable-rollback \
@@ -148,12 +148,12 @@ Here is an example of launching the Enterprise Edition of Alluxio using the 3-wo
                      ParameterKey=useSubnet,ParameterValue=subnet-[CHANGE ME] \
                      ParameterKey=securityGroupInboundSourceCidr,ParameterValue=0.0.0.0/0 \
                      ParameterKey=keypairName,ParameterValue=my-alluxio-keypair \
-                     ParameterKey=clusterSize,ParameterValue=3-workers \
+                     ParameterKey=clusterSize,ParameterValue=3-workers-mem-cache \
                      ParameterKey=alluxioS3BucketName,ParameterValue=my-alluxio-bucket \
                      ParameterKey=alluxioDownloadURL,ParameterValue=s3://my-alluxio-bucket/installers/alluxio-2.10.0-2.0-bin.tar.gz \
                      ParameterKey=alluxioLicenseDownloadURL,ParameterValue=s3://my-alluxio-bucket/installers/alluxio-enterprise-license.json
 
-Here is an example of launching the Community Edition of Alluxio using the 3-worker size:
+Here is an example of launching the Enterprise Edition of Alluxio using the 3-workers-nvme-cache clusterSize parameter which launches an Alluxio cluster with 3 masters nodes, 3 worker nodes that cache data on 2 300GB NVMe volumes and one monitor node for Prometheus and Grafana dashboards:
 
      $ aws cloudformation create-stack --stack-name My-Alluxio-Cluster \
         --disable-rollback \
@@ -166,8 +166,25 @@ Here is an example of launching the Community Edition of Alluxio using the 3-wor
                      ParameterKey=useSubnet,ParameterValue=subnet-[CHANGE ME] \
                      ParameterKey=securityGroupInboundSourceCidr,ParameterValue=0.0.0.0/0 \
                      ParameterKey=keypairName,ParameterValue=my-alluxio-keypair \
-                     ParameterKey=clusterSize,ParameterValue=3-workers \
-                     ParameterKey=alluxioS3BucketName,ParameterValue=my-alluxio-bucket
+                     ParameterKey=clusterSize,ParameterValue=3-workers-nvme-cache \
+                     ParameterKey=alluxioS3BucketName,ParameterValue=my-alluxio-bucket \
+                     ParameterKey=alluxioDownloadURL,ParameterValue=s3://my-alluxio-bucket/installers/alluxio-2.10.0-2.0-bin.tar.gz \
+                     ParameterKey=alluxioLicenseDownloadURL,ParameterValue=s3://my-alluxio-bucket/installers/alluxio-enterprise-license.json
+
+Here is an example of launching the Community  Edition of Alluxio using the 3-workers-mem-cache clusterSize parameter which launches an Alluxio cluster with 3 masters nodes, 3 worker nodes that only cache data to a RAM disk and one monitor node for Prometheus and Grafana dashboards:
+
+     $ aws cloudformation create-stack --stack-name My-Alluxio-Cluster \
+        --disable-rollback \
+        --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM \
+        --template-body file://./cloudformation/deploy-alluxio-on-aws.yaml \
+        --tags "Key=Business-Unit,Value=Presales" \
+               "Key=owner,Value=[CHANGE ME]" \
+               "Key=Name,Value=My-Alluxio-Cluster" \
+        --parameters ParameterKey=useVPC,ParameterValue=vpc-[CHANGE ME] \
+                     ParameterKey=useSubnet,ParameterValue=subnet-[CHANGE ME] \
+                     ParameterKey=securityGroupInboundSourceCidr,ParameterValue=0.0.0.0/0 \
+                     ParameterKey=keypairName,ParameterValue=my-alluxio-keypair \
+                     ParameterKey=clusterSize,ParameterValue=3-workers-mem-cache
 
 While the CloudFormation stack is being launched, you can query the status using commands like this:
 
