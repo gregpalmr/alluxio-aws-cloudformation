@@ -570,8 +570,8 @@ Resources:
     DependsOn: AlluxioMasterLC
     UpdatePolicy:
       AutoScalingRollingUpdate:
-        MaxBatchSize: 2
-        MinInstancesInService: 1
+        MaxBatchSize: 1
+        MinInstancesInService: 2
         PauseTime: PT15M
         WaitOnResourceSignals: true
     Properties:
