@@ -285,8 +285,10 @@ Mappings:
       CIDR: 10.0.15.0/16
     Public:
       CIDR: 10.0.15.0/24
+
 Conditions:
   CreateVPC: !Equals [!Ref useSubnet, ""]
+
 Resources:
   AlluxioIAMPolicy:
     Type: AWS::IAM::ManagedPolicy
@@ -344,6 +346,7 @@ Resources:
       Path: /
       ManagedPolicyArns:
         - !Ref AlluxioIAMPolicy
+
   AlluxioInstanceProfile:
     Type: 'AWS::IAM::InstanceProfile'
     Properties:
@@ -565,6 +568,12 @@ Resources:
   AlluxioMasterASG:
     Type: AWS::AutoScaling::AutoScalingGroup
     DependsOn: AlluxioMasterLC
+    UpdatePolicy:
+      AutoScalingRollingUpdate:
+        MaxBatchSize: 2
+        MinInstancesInService: 1
+        PauseTime: PT15M
+        WaitOnResourceSignals: true
     Properties:
       Tags:
         - Key: Name
@@ -686,6 +695,12 @@ Resources:
   AlluxioWorkerASG:
     Type: AWS::AutoScaling::AutoScalingGroup
     DependsOn: AlluxioWorkerLC
+    UpdatePolicy:
+      AutoScalingRollingUpdate:
+        MaxBatchSize: 2
+        MinInstancesInService: 1
+        PauseTime: PT15M
+        WaitOnResourceSignals: true
     Properties:
       Tags:
         - Key: Name
