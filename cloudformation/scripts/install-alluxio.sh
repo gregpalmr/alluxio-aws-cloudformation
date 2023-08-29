@@ -115,7 +115,7 @@ EOF
   if [ "$THIS_NODE_TYPE" == "master" ] || [ "$THIS_NODE_TYPE" == "MASTER" ]; then
 
     # Create the folder in the S3 bucket for the root.ufs
-    aws s3api put-object --bucket ${ALLUXIO_S3_BUCKET_NAME} --key "alluxio_ufs/$AWS_STACK_NAME/"
+    aws s3api put-object --bucket ${ALLUXIO_S3_BUCKET_NAME} --key "alluxio_root_ufs/$AWS_STACK_NAME/"
   fi # end if THIS_NODE_TYPE = MASTER
 
   # If this is a WORKER node, setup the worker
@@ -327,7 +327,7 @@ EOF
   alluxio.user.file.readtype.default=CACHE
 
   # Configure S3 as the root under storage system (UFS)
-  alluxio.master.mount.table.root.ufs=s3://${ALLUXIO_S3_BUCKET_NAME}/alluxio_ufs/${AWS_STACK_NAME}
+  alluxio.master.mount.table.root.ufs=s3://${ALLUXIO_S3_BUCKET_NAME}/alluxio_root_ufs/${AWS_STACK_NAME}
 
 EOF
 
