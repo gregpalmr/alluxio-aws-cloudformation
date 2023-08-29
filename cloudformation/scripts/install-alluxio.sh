@@ -165,6 +165,9 @@ EOF
         continue
       fi
 
+      # Change permissions so the alluxio user can access the nvme storage
+      chown alluxio:alluxio /nvme${diskno}
+
       # Get the UUID for the newly mounted disk
       uuid=$(blkid | grep ${NEXT_DISK} | awk '{ print $2 }' | sed 's/"//g')
       if [[ "$uuid" != *"UUID"* ]]; then
@@ -352,9 +355,22 @@ EOF
     # Format Alluxio journal
     su - alluxio bash -c "$ALLUXIO_HOME/bin/alluxio formatJournal"
 
-    # Start the Alluxio masters
-    #
-    su - alluxio bash -c "$ALLUXIO_HOME/bin/alluxio-start.sh master"
+    # Start the Alluxio master node daemons
+    
+    # if there is a metadata backup in the root ufs S3 bucket, restore it
+    cmd="aws s3 ls $STAGING_S3_BUCKET/alluxio_root_ufs/$AWS_STACK_NAME/alluxio_backups/ | grep '.gz$' | awk '{print $4}' | sort | tail -n 1"
+    echo " Checking for an Alluxio metadata backup file with the command:"
+    echo "$cmd"
+    backup_file=$($cmd)
+    if [ "$backup_file" != "" ]; then
+      cmd="$ALLUXIO_HOME/bin/alluxio-start.sh -i $STAGING_S3_BUCKET/alluxio_root_ufs/$AWS_STACK_NAME/alluxio_backups/$backup_file -a master"
+      echo " Starting the Alluxio master and restoring a metadata backup file with the command:"
+      echo $cmd
+      su - alluxio bash -c "$cmd"
+    else
+      echo " Starting the Alluxio master without restoring a metadata backup file"
+      su - alluxio bash -c "$ALLUXIO_HOME/bin/alluxio-start.sh master"
+    fi
     sleep 2
     su - alluxio bash -c "$ALLUXIO_HOME/bin/alluxio-start.sh job_master"
   
