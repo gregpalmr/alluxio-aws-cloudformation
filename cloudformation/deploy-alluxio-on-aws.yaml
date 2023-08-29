@@ -93,7 +93,8 @@ Metadata:
 Mappings:
   Custom:
     Variables:
-      HELPERSCRIPTSURL: "https://raw.githubusercontent.com/gregpalmr/alluxio-aws-cloudformation/main/cloudformation/scripts"
+      HELPERSCRIPTSURL: "https://alluxio-public.s3.amazonaws.com/alluxio-aws-cloudformation/cloudformation/scripts"
+      #HELPERSCRIPTSURL: "https://raw.githubusercontent.com/gregpalmr/alluxio-aws-cloudformation/main/cloudformation/scripts"
   ClusterSizes:
     1-worker-mem-cache:
       masterCount: 3
