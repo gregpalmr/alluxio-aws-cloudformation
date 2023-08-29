@@ -78,7 +78,7 @@ EOF
       fail_with_error "Parameter \"ALLUXIO_DOWNLOAD_URL\" not specified as either an s3:// or http:// URI. Specified as: $url "
     fi
 
-    if [ $? != 0 ] || [! -f /root/$(basename $url) ]; then
+    if [ "$?" != 0 ] || [! -f /root/$(basename $url) ]; then
       fail_with_error "Unable to download Alluxio install file: $url"
     fi
 
@@ -102,7 +102,7 @@ EOF
         fail_with_error "Parameter \"ALLUXIO_LICENSE_DOWNLOAD_URL\" not specified as either an s3:// or http:// URI. Specified as: $url "
       fi
 
-      if [ $? != 0 ]; then
+      if [ "$?" != 0 ]; then
         fail_with_error "Unable to download Alluxio license file."
       fi
     fi
@@ -317,6 +317,7 @@ EOF
   alluxio.master.embedded.journal.addresses=$JOURNAL_URLS
   alluxio.master.journal.folder=/opt/alluxio/journal
   alluxio.master.daily.backup.enabled=true
+  alluxio.master.backup.directory=s3://${ALLUXIO_S3_BUCKET_NAME}/alluxio_root_ufs/${AWS_STACK_NAME}/alluxio_backups
   alluxio.master.daily.backup.time=08:00
   alluxio.master.backup.delegation.enabled=true
 
@@ -358,10 +359,10 @@ EOF
     # Start the Alluxio master node daemons
     
     # if there is a metadata backup in the root ufs S3 bucket, restore it
-    cmd="aws s3 ls $STAGING_S3_BUCKET/alluxio_root_ufs/$AWS_STACK_NAME/alluxio_backups/ | grep '.gz$' | awk '{print $4}' | sort | tail -n 1"
+    cmd="aws s3 ls s3://${ALLUXIO_S3_BUCKET_NAME}/alluxio_root_ufs/${AWS_STACK_NAME}/alluxio_backups/ | grep '.gz$' | awk '{print $4}' | sort | tail -n 1"
     echo " Checking for an Alluxio metadata backup file with the command:"
     echo "$cmd"
-    backup_file=$($cmd)
+    backup_file=$(aws s3 ls s3://${ALLUXIO_S3_BUCKET_NAME}/alluxio_root_ufs/${AWS_STACK_NAME}/alluxio_backups/ | grep '.gz$' | awk '{print $4}' | sort | tail -n 1)
     if [ "$backup_file" != "" ]; then
       cmd="$ALLUXIO_HOME/bin/alluxio-start.sh -i $STAGING_S3_BUCKET/alluxio_root_ufs/$AWS_STACK_NAME/alluxio_backups/$backup_file -a master"
       echo " Starting the Alluxio master and restoring a metadata backup file with the command:"
